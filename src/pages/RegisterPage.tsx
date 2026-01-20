@@ -156,7 +156,7 @@ export default function RegisterPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Ihr Name"
-                  className="auth-input pl-9 py-2 text-sm"
+                  className="auth-input pl-10 py-2 text-sm"
                   disabled={isLoading}
                   autoComplete="name"
                 />
@@ -176,7 +176,7 @@ export default function RegisterPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="ihre@email.de"
-                  className="auth-input pl-9 py-2 text-sm"
+                  className="auth-input pl-10 py-2 text-sm"
                   disabled={isLoading}
                   autoComplete="email"
                   required
@@ -197,7 +197,7 @@ export default function RegisterPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Min. 8 Zeichen"
-                  className="auth-input pl-9 pr-9 py-2 text-sm"
+                  className="auth-input pl-10 pr-9 py-2 text-sm"
                   disabled={isLoading}
                   autoComplete="new-password"
                   required
@@ -247,7 +247,7 @@ export default function RegisterPage() {
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   placeholder="Wiederholen"
-                  className="auth-input pl-9 py-2 text-sm"
+                  className="auth-input pl-10 py-2 text-sm"
                   disabled={isLoading}
                   autoComplete="new-password"
                   required
@@ -299,27 +299,27 @@ export default function RegisterPage() {
           {/* Passkey - kommt nach erster Registrierung */}
           <button
             onClick={() => navigate('/login')}
-            className="w-full py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white flex items-center justify-center gap-2 shadow-sm"
+            className="alt-auth-btn bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-sm"
           >
-            <Fingerprint size={18} />
+            <Fingerprint />
             Passkey
           </button>
 
           {/* Google */}
           <button
             onClick={() => handleOAuthRegister('google')}
-            className="w-full py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400 text-gray-700 flex items-center justify-center gap-2"
+            className="alt-auth-btn bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400 text-gray-700"
           >
-            <Chrome size={18} />
+            <Chrome />
             Google
           </button>
 
           {/* GitHub */}
           <button
             onClick={() => handleOAuthRegister('github')}
-            className="w-full py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 bg-gray-900 hover:bg-gray-800 text-white flex items-center justify-center gap-2"
+            className="alt-auth-btn bg-gray-900 hover:bg-gray-800 text-white"
           >
-            <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24">
+            <svg fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
             </svg>
             GitHub
@@ -328,9 +328,9 @@ export default function RegisterPage() {
           {/* Microsoft */}
           <button
             onClick={() => handleOAuthRegister('active-directory')}
-            className="w-full py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 bg-[#00a4ef] hover:bg-[#0095d9] text-white flex items-center justify-center gap-2"
+            className="alt-auth-btn bg-[#00a4ef] hover:bg-[#0095d9] text-white"
           >
-            <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24">
+            <svg fill="currentColor" viewBox="0 0 24 24">
               <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
             </svg>
             Microsoft
@@ -339,9 +339,9 @@ export default function RegisterPage() {
           {/* Apple */}
           <button
             onClick={() => handleOAuthRegister('apple')}
-            className="w-full py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 bg-black hover:bg-gray-900 text-white flex items-center justify-center gap-2"
+            className="alt-auth-btn bg-black hover:bg-gray-900 text-white"
           >
-            <svg className="w-4.5 h-4.5" fill="currentColor" viewBox="0 0 24 24">
+            <svg fill="currentColor" viewBox="0 0 24 24">
               <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
             </svg>
             Apple

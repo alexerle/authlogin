@@ -83,6 +83,16 @@ body {
   @apply flex items-center justify-center gap-2;
 }
 
+/* Alternative Auth Method Buttons (right column) */
+.alt-auth-btn {
+  @apply w-full h-11 px-4 rounded-lg text-sm font-medium transition-all duration-200;
+  @apply flex items-center justify-center gap-2;
+}
+
+.alt-auth-btn svg {
+  @apply w-5 h-5 flex-shrink-0;
+}
+
 /* Link Styles */
 .auth-link {
   @apply text-blue-600 hover:text-blue-800 transition-colors duration-200 cursor-pointer;
