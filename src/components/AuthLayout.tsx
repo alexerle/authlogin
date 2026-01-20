@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import Logo from './Logo'
+import AppCarousel from './AppCarousel'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -13,47 +14,32 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
       <div className="w-full max-w-md">
         {/* Auth Card */}
         <div className="auth-card bg-white rounded-2xl shadow-2xl p-8">
-          {/* Logo */}
-          <div className="mb-8 flex flex-col items-center">
-            <Logo />
-            {title && (
-              <h1 className="mt-6 text-2xl font-bold text-gray-800">{title}</h1>
-            )}
-            {subtitle && (
-              <p className="mt-2 text-gray-600 text-center">{subtitle}</p>
-            )}
+          {/* Logo - zentriert oben */}
+          <div className="mb-6 flex flex-col items-center">
+            <Logo size="large" />
+            <h1 className="mt-4 text-xl font-semibold text-gray-600">Zentraler Login</h1>
           </div>
+
+          {/* Title/Subtitle falls vorhanden */}
+          {(title || subtitle) && (
+            <div className="mb-6 text-center">
+              {title && (
+                <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+              )}
+              {subtitle && (
+                <p className="mt-1 text-gray-500">{subtitle}</p>
+              )}
+            </div>
+          )}
 
           {/* Content */}
           {children}
 
-          {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-center text-gray-500 text-xs">
-              © {new Date().getFullYear()} 10hoch2 GmbH
-            </p>
-            <div className="flex justify-center gap-4 mt-2">
-              <a href="https://10hoch2.de/datenschutz" className="text-xs text-gray-400 hover:text-gray-600">
-                Datenschutz
-              </a>
-              <a href="https://10hoch2.de/impressum" className="text-xs text-gray-400 hover:text-gray-600">
-                Impressum
-              </a>
-              <a href="https://10hoch2.de/agb" className="text-xs text-gray-400 hover:text-gray-600">
-                AGB
-              </a>
-            </div>
+          {/* Animated App Footer */}
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <p className="text-center text-xs text-gray-400 mb-4">Zugang zu allen Diensten</p>
+            <AppCarousel />
           </div>
-        </div>
-
-        {/* Help Text */}
-        <div className="mt-4 text-center">
-          <p className="text-white text-sm opacity-90">
-            Probleme beim Login?{' '}
-            <a href="mailto:support@10hoch2.de" className="underline hover:no-underline">
-              Support kontaktieren
-            </a>
-          </p>
         </div>
       </div>
     </div>

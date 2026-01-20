@@ -113,3 +113,37 @@ body {
 .password-strength.fair { @apply bg-yellow-500 w-2/4; }
 .password-strength.good { @apply bg-blue-500 w-3/4; }
 .password-strength.strong { @apply bg-green-500 w-full; }
+
+/* App Carousel Animation */
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll 20s linear infinite;
+}
+
+.animate-scroll:hover {
+  animation-play-state: paused;
+}
+
+/* Pulse Animation für App Icons */
+@keyframes pulse-soft {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
