@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, BarChart3, Users, Settings, LogOut, ExternalLink, User } from 'lucide-react'
+import { Search, BarChart3, Users, Settings, LogOut, ExternalLink, Shield } from 'lucide-react'
 import Logo from '../components/Logo'
 import api from '../utils/api'
 
@@ -118,11 +118,11 @@ export default function ServicesPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => navigate('/account')}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
-                  title="Konto verwalten"
+                  onClick={() => navigate('/security')}
+                  className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                  title="Sicherheitseinstellungen"
                 >
-                  <User size={20} />
+                  <Shield size={20} />
                 </button>
                 <button
                   onClick={handleLogout}

@@ -5,6 +5,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
 import ServicesPage from './pages/ServicesPage'
+import SecuritySettingsPage from './pages/SecuritySettingsPage'
 
 function App() {
   return (
@@ -17,12 +18,16 @@ function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-        {/* Services Dashboard (after login) */}
+        {/* User Dashboard & Settings */}
         <Route path="/services" element={<ServicesPage />} />
+        <Route path="/security" element={<SecuritySettingsPage />} />
 
-        {/* SuperTokens callback routes */}
+        {/* OAuth callback routes */}
         <Route path="/auth/callback/google" element={<LoginPage />} />
         <Route path="/auth/callback/github" element={<LoginPage />} />
+        <Route path="/auth/callback/apple" element={<LoginPage />} />
+        <Route path="/auth/callback/facebook" element={<LoginPage />} />
+        <Route path="/auth/callback/active-directory" element={<LoginPage />} />
 
         {/* Default redirect */}
         <Route path="/" element={<Navigate to="/login" replace />} />

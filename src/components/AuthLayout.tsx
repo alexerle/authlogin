@@ -11,7 +11,7 @@ interface AuthLayoutProps {
 export default function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-xl">
         {/* Auth Card */}
         <div className="auth-card bg-white rounded-2xl shadow-2xl p-8">
           {/* Logo - zentriert oben */}
