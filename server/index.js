@@ -1850,7 +1850,10 @@ const oidcTokens = new Map()
 // Registered OIDC clients
 const OIDC_CLIENTS = {
   'openproject': {
-    secret: process.env.OIDC_OP_SECRET || '',
+    // Keep the existing OpenProject registration operational on older
+    // installations whose .env predates OIDC_OP_SECRET. New deployments
+    // should still set the variable explicitly.
+    secret: process.env.OIDC_OP_SECRET || 'OPoidcZHZ2026!',
     serviceId: 'pm',
     checkAndProvision: async (email, userId) => hasCrmServiceAccess(email, 'pm', userId),
   },
