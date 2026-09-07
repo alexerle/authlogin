@@ -42,6 +42,7 @@ export default function LoginPage() {
   const serviceName = inferredEntry.service
   const forceLogin = searchParams.get('prompt') === 'login'
   const loginHint = searchParams.get('login_hint') || ''
+  const registerHref = `/register${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
   const crmFallback = 'https://crm.10hoch2.de/auth/callback?next=%2Fdashboard'
   const redirectTargetHost = (() => {
     try {
@@ -703,7 +704,7 @@ export default function LoginPage() {
       {/* Register Link */}
       <div className="mt-6 text-center">
         <span className="text-gray-600 text-sm">Noch kein Konto? </span>
-        <Link to="/register" className="text-sm auth-link font-medium">
+        <Link to={registerHref} className="text-sm auth-link font-medium">
           Jetzt registrieren
         </Link>
       </div>
