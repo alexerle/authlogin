@@ -40,6 +40,8 @@ export default function LoginPage() {
   })()
   const redirectUrl = inferredEntry.redirect
   const serviceName = inferredEntry.service
+  const forceLogin = searchParams.get('prompt') === 'login'
+  const loginHint = searchParams.get('login_hint') || ''
   const crmFallback = 'https://crm.10hoch2.de/auth/callback?next=%2Fdashboard'
   const redirectTargetHost = (() => {
     try {
@@ -51,7 +53,7 @@ export default function LoginPage() {
   const handoffDomains = ['crm.10hoch2.de', 'crm.cp.zhzcloud.de', 'cp.zhzcloud.de', 'web.zhzcloud.de', 'zhzcloud.de', 'login.eazyfind.me', 'v2.betterassist.me']
   const needsHandoff = handoffDomains.includes(redirectTargetHost) || handoffDomains.includes(serviceName)
 
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(loginHint)
   const [password, setPassword] = useState('')
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('otp')
   const [otpStep, setOtpStep] = useState<OtpStep>('request')
@@ -154,6 +156,12 @@ export default function LoginPage() {
     if (!redirectUrl || !isAllowedRedirect(redirectUrl) || !needsHandoff) return
 
     let cancelled = false
+    if (forceLogin) {
+      clearStaleSession().catch(() => undefined)
+      return () => {
+        cancelled = true
+      }
+    }
     api.get('/auth/session/user', { skipAuthRefresh: true } as any).then(res => {
       if (!cancelled && res.data.status === 'OK') {
         handleLoginSuccess('', false).catch(() => {
