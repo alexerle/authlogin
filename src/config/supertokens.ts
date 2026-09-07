@@ -50,7 +50,6 @@ export const ALLOWED_REDIRECT_DOMAINS = [
 const BETTERASSIST_CALLBACK = 'https://v2.betterassist.me/auth/callback'
 
 function isAllowedBetterAssistRedirect(parsedUrl: URL): boolean {
-  if (import.meta.env.VITE_BETTERASSIST_HANDOFF_V2_ENABLED !== 'true') return false
   const expected = new URL(BETTERASSIST_CALLBACK)
   return parsedUrl.protocol === expected.protocol
     && parsedUrl.hostname === expected.hostname

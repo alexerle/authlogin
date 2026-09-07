@@ -34,7 +34,7 @@ interface ServiceDef {
 }
 
 const ALL_SERVICES: ServiceDef[] = [
-  ...(import.meta.env.VITE_BETTERASSIST_HANDOFF_V2_ENABLED === 'true' ? [{
+  {
     id: 'betterassist',
     name: 'BetterAssist',
     description: 'KI-Assistenten und Shop-Beratung verwalten',
@@ -46,7 +46,7 @@ const ALL_SERVICES: ServiceDef[] = [
     bgColor: 'bg-violet-50',
     roles: ['customer', 'partner', 'admin', 'support'],
     requiresService: 'betterassist',
-  }] : []),
+  },
   {
     id: 'crm-portal',
     name: 'CRM Kundenportal',
