@@ -37,16 +37,34 @@ export const ALLOWED_REDIRECT_DOMAINS = [
   'eazyfind.me',
   'login.eazyfind.me',
   'search01.eazyfind.me',
+  'cp.zhzcloud.de',
+  'web.zhzcloud.de',
+  'zhzcloud.de',
+  'crm.cp.zhzcloud.de',
+  'crm.10hoch2.de',
   '10hoch2.de',
   'auth.10hoch2.de',
   'localhost',
 ]
 
+const BETTERASSIST_CALLBACK = 'https://v2.betterassist.me/auth/callback'
+
+function isAllowedBetterAssistRedirect(parsedUrl: URL): boolean {
+  if (import.meta.env.VITE_BETTERASSIST_HANDOFF_V2_ENABLED !== 'true') return false
+  const expected = new URL(BETTERASSIST_CALLBACK)
+  return parsedUrl.protocol === expected.protocol
+    && parsedUrl.hostname === expected.hostname
+    && parsedUrl.port === ''
+    && parsedUrl.pathname === expected.pathname
+    && parsedUrl.username === ''
+    && parsedUrl.password === ''
+}
+
 // Check if redirect URL is allowed
 export const isAllowedRedirect = (url: string): boolean => {
   try {
     const parsedUrl = new URL(url)
-    return ALLOWED_REDIRECT_DOMAINS.some(domain =>
+    return isAllowedBetterAssistRedirect(parsedUrl) || ALLOWED_REDIRECT_DOMAINS.some(domain =>
       parsedUrl.hostname === domain || parsedUrl.hostname.endsWith('.' + domain)
     )
   } catch {

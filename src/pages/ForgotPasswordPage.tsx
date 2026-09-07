@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Mail, Loader, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react'
 import AuthLayout from '../components/AuthLayout'
 import api from '../utils/api'
+import { requestTurnstileToken } from '../utils/turnstile'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -22,8 +23,12 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
 
     try {
+      const securityResponse = await api.get('/auth/security/turnstile/config')
+      const turnstileToken = await requestTurnstileToken(securityResponse.data.siteKey)
       const response = await api.post('/auth/user/password/reset/token', {
         formFields: [{ id: 'email', value: email }],
+      }, {
+        headers: { 'x-turnstile-token': turnstileToken },
       })
 
       if (response.data.status === 'OK') {
@@ -33,8 +38,9 @@ export default function ForgotPasswordPage() {
         setSuccess(true)
       }
     } catch (err: any) {
-      // Still show success for security (don't reveal if email exists)
-      setSuccess(true)
+      const message = err.response?.data?.message || err.message
+      if (message?.includes('Sicherheitsprüfung')) setError(message)
+      else setSuccess(true) // Do not reveal whether an account exists.
     } finally {
       setIsLoading(false)
     }
@@ -98,7 +104,7 @@ export default function ForgotPasswordPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ihre@email.de"
-              className="auth-input pl-10"
+              className="auth-input pl-11"
               disabled={isLoading}
               autoComplete="email"
               required

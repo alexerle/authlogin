@@ -19,7 +19,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: #f9fafb;
   min-height: 100vh;
 }
 
@@ -47,7 +47,7 @@ body {
 
 /* Custom Input Styles */
 .auth-input {
-  @apply w-full px-4 py-3 border border-gray-300 rounded-lg transition-all duration-200;
+  @apply w-full pr-4 py-3 border border-gray-300 rounded-lg transition-all duration-200;
   @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
   @apply placeholder-gray-400;
 }
@@ -83,16 +83,6 @@ body {
   @apply flex items-center justify-center gap-2;
 }
 
-/* Alternative Auth Method Buttons (right column) */
-.alt-auth-btn {
-  @apply w-full h-11 px-4 rounded-lg text-sm font-medium transition-all duration-200;
-  @apply flex items-center justify-center gap-2;
-}
-
-.alt-auth-btn svg {
-  @apply w-5 h-5 flex-shrink-0;
-}
-
 /* Link Styles */
 .auth-link {
   @apply text-blue-600 hover:text-blue-800 transition-colors duration-200 cursor-pointer;
@@ -123,37 +113,3 @@ body {
 .password-strength.fair { @apply bg-yellow-500 w-2/4; }
 .password-strength.good { @apply bg-blue-500 w-3/4; }
 .password-strength.strong { @apply bg-green-500 w-full; }
-
-/* App Carousel Animation */
-@keyframes scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-scroll {
-  animation: scroll 20s linear infinite;
-}
-
-.animate-scroll:hover {
-  animation-play-state: paused;
-}
-
-/* Pulse Animation für App Icons */
-@keyframes pulse-soft {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.9;
-  }
-}
-
-.animate-pulse-soft {
-  animation: pulse-soft 2s ease-in-out infinite;
-}
