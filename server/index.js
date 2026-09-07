@@ -1454,8 +1454,9 @@ app.post('/internal/handoff-token', async (req, res) => {
       name: req.body?.name || metadata.name || '',
       targetDomain,
       exp,
-      // A service secret proves the caller, not that the end user completed MFA.
-      mfaDone: false,
+      // Trusted portals may forward the MFA result from the handoff token they
+      // verified when establishing their own short-lived session.
+      mfaDone: req.body?.mfaDone === true,
     })
 
     res.json({ status: 'OK', token })
