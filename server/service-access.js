@@ -16,7 +16,8 @@ function updateProvisionedServices(current, service, enabled) {
 }
 
 function isBetterAssistRegistrationHandoff(targetDomain, purpose) {
-  return targetDomain === 'v2.betterassist.me' && purpose === 'registration'
+  return ['v2.betterassist.me', 'app1.betterassist.me'].includes(targetDomain)
+    && purpose === 'registration'
 }
 
 module.exports = {

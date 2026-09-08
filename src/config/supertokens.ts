@@ -47,16 +47,21 @@ export const ALLOWED_REDIRECT_DOMAINS = [
   'localhost',
 ]
 
-const BETTERASSIST_CALLBACK = 'https://v2.betterassist.me/auth/callback'
+const BETTERASSIST_CALLBACKS = [
+  'https://v2.betterassist.me/auth/callback',
+  'https://app1.betterassist.me/auth/callback',
+]
 
 function isAllowedBetterAssistRedirect(parsedUrl: URL): boolean {
-  const expected = new URL(BETTERASSIST_CALLBACK)
-  return parsedUrl.protocol === expected.protocol
-    && parsedUrl.hostname === expected.hostname
-    && parsedUrl.port === ''
-    && parsedUrl.pathname === expected.pathname
-    && parsedUrl.username === ''
-    && parsedUrl.password === ''
+  return BETTERASSIST_CALLBACKS.some((callback) => {
+    const expected = new URL(callback)
+    return parsedUrl.protocol === expected.protocol
+      && parsedUrl.hostname === expected.hostname
+      && parsedUrl.port === ''
+      && parsedUrl.pathname === expected.pathname
+      && parsedUrl.username === ''
+      && parsedUrl.password === ''
+  })
 }
 
 // Check if redirect URL is allowed

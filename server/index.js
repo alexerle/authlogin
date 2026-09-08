@@ -52,7 +52,7 @@ const websiteDomain = process.env.WEBSITE_DOMAIN || 'http://localhost:5173'
 const cookieDomain = process.env.COOKIE_DOMAIN || undefined
 const handoffSecret = requireSecret('HANDOFF_SECRET')
 const betterAssistHandoffV2Enabled = process.env.BETTERASSIST_HANDOFF_V2_ENABLED === 'true'
-const betterAssistHandoffV2Target = 'v2.betterassist.me'
+const betterAssistHandoffV2Targets = new Set(['v2.betterassist.me', 'app1.betterassist.me'])
 const betterAssistHandoffV2Secret = betterAssistHandoffV2Enabled
   ? requireSecret('BETTERASSIST_HANDOFF_V2_SECRET')
   : ''
@@ -1321,7 +1321,7 @@ app.post('/auth/handoff-token', verifySession(), async (req, res) => {
     }
 
     const mfaDone = sessionMfaDone
-    const token = targetDomain === betterAssistHandoffV2Target
+    const token = betterAssistHandoffV2Targets.has(targetDomain)
       ? createHandoffV2Token({
         secret: betterAssistHandoffV2Secret,
         userId,
@@ -1350,7 +1350,7 @@ const allowedHandoffTargets = [
   'cp.zhzcloud.de', 'web.zhzcloud.de', 'zhzcloud.de', 'login.eazyfind.me',
   'portal.10hoch2.de', 'admin.10hoch2.de',
   'crm.cp.zhzcloud.de', 'crm.10hoch2.de', 'auth.10hoch2.de',
-  ...(betterAssistHandoffV2Enabled ? [betterAssistHandoffV2Target] : []),
+  ...(betterAssistHandoffV2Enabled ? [...betterAssistHandoffV2Targets] : []),
 ]
 
 const handoffServiceByDomain = {
@@ -1362,7 +1362,9 @@ const handoffServiceByDomain = {
   'portal.10hoch2.de': 'crm',
   'admin.10hoch2.de': 'crm',
   'login.eazyfind.me': 'eazyfind',
-  ...(betterAssistHandoffV2Enabled ? { [betterAssistHandoffV2Target]: 'betterassist' } : {}),
+  ...(betterAssistHandoffV2Enabled
+    ? Object.fromEntries([...betterAssistHandoffV2Targets].map(domain => [domain, 'betterassist']))
+    : {}),
 }
 
 const allowedHandoffNextHosts = [
@@ -1437,7 +1439,7 @@ app.post('/internal/handoff-token', async (req, res) => {
     if (!isAllowedHandoffTarget(targetDomain)) {
       return res.status(400).json({ status: 'ERROR', message: 'Unauthorized target domain' })
     }
-    if (targetDomain === betterAssistHandoffV2Target) {
+    if (betterAssistHandoffV2Targets.has(targetDomain)) {
       return res.status(400).json({ status: 'ERROR', message: 'Interactive handoff required' })
     }
 
@@ -1502,7 +1504,7 @@ app.get('/auth/handoff-login', async (req, res) => {
 // Handoff-Token validieren (vom Zieldienst aufgerufen)
 app.post('/auth/verify-handoff-token', async (req, res) => {
   try {
-    const { token } = req.body
+    const { token, expectedTargetDomain } = req.body
     if (!token) return res.status(400).json({ status: 'ERROR', message: 'Token required' })
 
     const decoded = token.includes('.')
@@ -1511,16 +1513,19 @@ app.post('/auth/verify-handoff-token', async (req, res) => {
         if (!betterAssistVerifyKeyMatches(req.headers['x-betterassist-verify-key'])) {
           throw new Error('Unauthorized handoff v2 verifier')
         }
+        if (!betterAssistHandoffV2Targets.has(expectedTargetDomain)) {
+          throw new Error('Unauthorized BetterAssist target domain')
+        }
         return verifyAndConsumeHandoffV2Token({
           token,
           secret: betterAssistHandoffV2Secret,
-          expectedTargetDomain: betterAssistHandoffV2Target,
+          expectedTargetDomain,
           replayStore: betterAssistHandoffV2ReplayStore,
         })
       })()
       : verifyHandoffToken(token)
     const { userId, role, name, targetDomain } = decoded
-    if (targetDomain === betterAssistHandoffV2Target && decoded.v !== 2) {
+    if (betterAssistHandoffV2Targets.has(targetDomain) && decoded.v !== 2) {
       throw new Error('Handoff v2 required for BetterAssist')
     }
 

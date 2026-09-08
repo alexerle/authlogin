@@ -21,6 +21,7 @@ test('unknown services are rejected', () => {
 
 test('only the explicit BetterAssist registration handoff bypasses prior service access', () => {
   assert.equal(isBetterAssistRegistrationHandoff('v2.betterassist.me', 'registration'), true)
+  assert.equal(isBetterAssistRegistrationHandoff('app1.betterassist.me', 'registration'), true)
   assert.equal(isBetterAssistRegistrationHandoff('v2.betterassist.me', ''), false)
   assert.equal(isBetterAssistRegistrationHandoff('crm.10hoch2.de', 'registration'), false)
 })

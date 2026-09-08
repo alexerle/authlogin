@@ -52,7 +52,7 @@ export default function LoginPage() {
       return ''
     }
   })()
-  const handoffDomains = ['crm.10hoch2.de', 'crm.cp.zhzcloud.de', 'cp.zhzcloud.de', 'web.zhzcloud.de', 'zhzcloud.de', 'login.eazyfind.me', 'v2.betterassist.me']
+  const handoffDomains = ['crm.10hoch2.de', 'crm.cp.zhzcloud.de', 'cp.zhzcloud.de', 'web.zhzcloud.de', 'zhzcloud.de', 'login.eazyfind.me', 'v2.betterassist.me', 'app1.betterassist.me']
   const needsHandoff = handoffDomains.includes(redirectTargetHost) || handoffDomains.includes(serviceName)
 
   const [email, setEmail] = useState(loginHint)
@@ -147,8 +147,8 @@ export default function LoginPage() {
       window.location.href = 'https://cp.zhzcloud.de/auth/login?error=sso_failed'
     } else if (redirectTargetHost === 'web.zhzcloud.de') {
       window.location.href = 'https://web.zhzcloud.de/?legacy=1&sso_error=no_service_access'
-    } else if (redirectTargetHost === 'v2.betterassist.me') {
-      window.location.href = 'https://v2.betterassist.me/auth/login?error=sso_failed'
+    } else if (redirectTargetHost === 'v2.betterassist.me' || redirectTargetHost === 'app1.betterassist.me') {
+      window.location.href = `https://${redirectTargetHost}/auth/login?error=sso_failed`
     } else {
       window.location.href = crmFallback
     }
