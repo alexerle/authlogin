@@ -2105,6 +2105,22 @@ app.get('/auth/user/needs-password', verifySession(), async (req, res) => {
 // Only accessible from internal IPs (127.x, 172.x, 10.x, 192.168.x)
 const INTERNAL_PROVISION_SECRET = internalProvisionSecret
 
+app.post('/internal/betterassist/account-exists', async (req, res) => {
+  if (!betterAssistVerifyKeyMatches(req.headers['x-betterassist-verify-key'])) {
+    return res.status(401).json({ status: 'ERROR', message: 'Unauthorized' })
+  }
+  const email = String(req.body?.email || '').trim().toLowerCase()
+  if (!email || email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ status: 'ERROR', message: 'Invalid email' })
+  }
+  try {
+    const users = await supertokens.listUsersByAccountInfo('public', { email })
+    return res.json({ status: 'OK', exists: users.length > 0 })
+  } catch (err) {
+    return res.status(500).json({ status: 'ERROR', message: err.message })
+  }
+})
+
 app.get('/internal/users', async (req, res) => {
   const secret = req.headers['x-provision-secret'] || req.query?.secret
   if (secret !== INTERNAL_PROVISION_SECRET) {

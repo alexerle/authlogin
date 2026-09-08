@@ -9,9 +9,10 @@ export default function RegisterPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const loginHref = `/login${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+  const loginHint = searchParams.get('login_hint') || ''
 
   const [formData, setFormData] = useState({
-    email: '',
+    email: loginHint,
     password: '',
     confirmPassword: '',
     name: '',
