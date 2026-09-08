@@ -2105,7 +2105,7 @@ app.get('/auth/user/needs-password', verifySession(), async (req, res) => {
 // Only accessible from internal IPs (127.x, 172.x, 10.x, 192.168.x)
 const INTERNAL_PROVISION_SECRET = internalProvisionSecret
 
-app.post('/internal/betterassist/account-exists', async (req, res) => {
+app.post('/auth/betterassist/account-exists', async (req, res) => {
   if (!betterAssistVerifyKeyMatches(req.headers['x-betterassist-verify-key'])) {
     return res.status(401).json({ status: 'ERROR', message: 'Unauthorized' })
   }
