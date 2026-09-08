@@ -42,6 +42,7 @@ export default function LoginPage() {
   const serviceName = inferredEntry.service
   const forceLogin = searchParams.get('prompt') === 'login'
   const loginHint = searchParams.get('login_hint') || ''
+  const handoffPurpose = searchParams.get('purpose') === 'registration' ? 'registration' : undefined
   const registerHref = `/register${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
   const crmFallback = 'https://crm.10hoch2.de/auth/callback?next=%2Fdashboard'
   const redirectTargetHost = (() => {
@@ -130,7 +131,7 @@ export default function LoginPage() {
 
   const completeHandoff = async () => {
     const targetDomain = redirectTargetHost || serviceName || 'crm.10hoch2.de'
-    const res = await api.post('/auth/handoff-token', { targetDomain })
+    const res = await api.post('/auth/handoff-token', { targetDomain, purpose: handoffPurpose })
     if (res.data.status !== 'OK' || !res.data.token) {
       throw new Error('SSO handoff failed')
     }

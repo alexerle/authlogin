@@ -18,7 +18,11 @@ const Dashboard = require('supertokens-node/recipe/dashboard')
 const { middleware, errorHandler } = require('supertokens-node/framework/express')
 const { verifySession } = require('supertokens-node/recipe/session/framework/express')
 const { sendEmail } = require('./email')
-const { PROVISIONABLE_SERVICES, updateProvisionedServices } = require('./service-access')
+const {
+  PROVISIONABLE_SERVICES,
+  isBetterAssistRegistrationHandoff,
+  updateProvisionedServices,
+} = require('./service-access')
 const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
 const QRCode = require('qrcode')
@@ -1263,6 +1267,7 @@ app.post('/auth/handoff-token', verifySession(), async (req, res) => {
     let userId = req.session.getUserId()
     const payload = req.session.getAccessTokenPayload()
     const { targetDomain } = req.body
+    const handoffPurpose = req.body?.purpose === 'registration' ? 'registration' : ''
 
     if (!isAllowedHandoffTarget(targetDomain)) {
       return res.status(400).json({ status: 'ERROR', message: 'Unauthorized target domain' })
@@ -1306,7 +1311,12 @@ app.post('/auth/handoff-token', verifySession(), async (req, res) => {
     const user = await supertokens.getUser(userId)
     const email = user?.emails?.[0] || ''
     const requiredService = handoffServiceByDomain[targetDomain]
-    if (requiredService && !(await hasCrmServiceAccess(email, requiredService, userId))) {
+    const betterAssistRegistration = isBetterAssistRegistrationHandoff(
+      targetDomain,
+      handoffPurpose,
+    )
+    if (requiredService && !betterAssistRegistration
+        && !(await hasCrmServiceAccess(email, requiredService, userId))) {
       return res.status(403).json({ status: 'ERROR', message: 'No service access' })
     }
 

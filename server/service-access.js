@@ -15,4 +15,12 @@ function updateProvisionedServices(current, service, enabled) {
     : values.filter(value => value !== service)
 }
 
-module.exports = { PROVISIONABLE_SERVICES, updateProvisionedServices }
+function isBetterAssistRegistrationHandoff(targetDomain, purpose) {
+  return targetDomain === 'v2.betterassist.me' && purpose === 'registration'
+}
+
+module.exports = {
+  PROVISIONABLE_SERVICES,
+  updateProvisionedServices,
+  isBetterAssistRegistrationHandoff,
+}
