@@ -175,6 +175,19 @@ const ALL_SERVICES: ServiceDef[] = [
   },
 ]
 
+const SWITCHER_LABELS: Record<string, string> = {
+  betterassist: 'BetterAssist',
+  'crm-portal': 'CRM',
+  'hosting-panel': 'Control Panel',
+  'access-portal': 'Access Portal',
+  'eazyfind-admin': 'Eazyfind',
+  eazyfind: 'Eazyfind',
+  analytics: 'Analytics',
+  projektverwaltung: 'Projekte',
+  tickets: 'Ticketsystem',
+  sign: 'Sign / Verträge',
+}
+
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator',
   support: 'Support',
@@ -395,7 +408,7 @@ export default function ServicesPage() {
                   <div className="p-1">
                     {visibleServices.map(service => (
                       <button key={service.id} type="button" onClick={() => { setServiceMenuOpen(false); void handleServiceClick(service) }} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950">
-                        <span className={service.color}>{service.icon}</span><span className="flex-1">{service.name}</span><ExternalLink size={14} className="text-slate-400" />
+                        <span className={service.color}>{service.icon}</span><span className="flex-1">{SWITCHER_LABELS[service.id] ?? service.name}</span><ExternalLink size={14} className="text-slate-400" />
                       </button>
                     ))}
                   </div>
