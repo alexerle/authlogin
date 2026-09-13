@@ -218,9 +218,8 @@ export default function ServicesPage() {
     }
   }
 
-  const handleLogout = async () => {
-    try { await api.post('/auth/signout') } catch (_) {}
-    navigate('/login')
+  const handleLogout = () => {
+    window.location.assign('/auth/signout?redirect=%2Flogin')
   }
 
   const handleTotpChange = (index: number, value: string) => {

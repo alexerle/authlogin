@@ -33,6 +33,7 @@ const {
   verifyAndConsumeHandoffV2Token,
 } = require('./handoff-v2')
 const { readCompleteProfile, validateProfileNames } = require('./profile-fields')
+const { configuredLogoutEndpoints, nextLogoutUrl, safeFinalUrl } = require('./logout-chain')
 const {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -125,6 +126,7 @@ const trustedMfaMaxAgeMs = Math.max(1, Number(process.env.TRUSTED_MFA_DEVICE_DAY
 const emailMfaChallenges = new Map()
 const emailMfaRequestWindows = new Map()
 const crmShadowObservationCache = new Map()
+const serviceLogoutEndpoints = configuredLogoutEndpoints(process.env.SERVICE_LOGOUT_ENDPOINTS)
 
 function trustedMfaSignature(payload) {
   return crypto.createHmac('sha256', handoffSecret).update(payload).digest('base64url')
@@ -619,6 +621,16 @@ app.use('/auth/user/password/reset/token', async (req, res, next) => {
 app.use(middleware())
 app.post('/auth/signout', handleSignout)
 app.get('/auth/signout', verifySession({ sessionRequired: false }), handleSignout)
+app.get('/auth/signout/continue', (req, res) => {
+  const step = Number.parseInt(String(req.query?.step || '0'), 10)
+  const finalUrl = safeFinalUrl(req.query?.redirect, websiteDomain)
+  res.redirect(303, nextLogoutUrl({
+    step: Number.isFinite(step) ? step : 0,
+    finalUrl,
+    websiteDomain,
+    endpoints: serviceLogoutEndpoints,
+  }))
+})
 
 // --- Routes ---
 
@@ -1144,16 +1156,15 @@ app.delete('/auth/admin/users/:userId', requireAdmin, async (req, res) => {
 
 async function handleSignout(req, res) {
   const redirectAfterSignout = () => {
-    const requested = String(req.query?.redirect || '').trim()
-    if (!requested) return false
-    try {
-      const target = new URL(requested, websiteDomain)
-      if (target.origin !== websiteDomain) return false
-      res.redirect(303, target.toString())
-      return true
-    } catch (_) {
-      return false
-    }
+    if (req.method !== 'GET') return false
+    const finalUrl = safeFinalUrl(req.query?.redirect, websiteDomain)
+    res.redirect(303, nextLogoutUrl({
+      step: 0,
+      finalUrl,
+      websiteDomain,
+      endpoints: serviceLogoutEndpoints,
+    }))
+    return true
   }
   try {
     if (req.session) {
