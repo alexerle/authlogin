@@ -27,6 +27,15 @@ interface PasskeyEntry {
   lastUsedAt: string | null
 }
 
+interface ServiceSecurityPolicy {
+  service: string
+  label: string
+  enabled: boolean
+  locked: boolean
+  minimumMfa: 'OPTIONAL' | 'REQUIRED' | 'PHISHING_RESISTANT'
+  trustedDeviceDays: number
+}
+
 export default function AccountPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -38,6 +47,9 @@ export default function AccountPage() {
   const [passkeys, setPasskeys] = useState<PasskeyEntry[]>([])
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [passkeyMsg, setPasskeyMsg] = useState('')
+  const [servicePolicies, setServicePolicies] = useState<ServiceSecurityPolicy[]>([])
+  const [servicePolicyLoading, setServicePolicyLoading] = useState<string | null>(null)
+  const [servicePolicyMsg, setServicePolicyMsg] = useState('')
 
   // TOTP Setup State
   const [totpSetup, setTotpSetup] = useState<{ qrUrl: string; secret: string } | null>(null)
@@ -66,6 +78,8 @@ export default function AccountPage() {
       setTotpStatus(totpRes.data)
       const passkeyRes = await api.get('/auth/passkeys').catch(() => ({ data: { passkeys: [] } }))
       setPasskeys(passkeyRes.data.passkeys || [])
+      const policyRes = await api.get('/auth/security/service-policies').catch(() => ({ data: { policies: [] } }))
+      setServicePolicies(policyRes.data.policies || [])
     } catch {
       navigate('/login')
     } finally {
@@ -185,6 +199,21 @@ export default function AccountPage() {
       setPasskeyMsg('Passkey konnte nicht entfernt werden.')
     } finally {
       setPasskeyLoading(false)
+    }
+  }
+
+  const handleServicePolicyChange = async (policy: ServiceSecurityPolicy) => {
+    if (policy.locked) return
+    setServicePolicyLoading(policy.service)
+    setServicePolicyMsg('')
+    try {
+      const response = await api.put(`/auth/security/service-policies/${encodeURIComponent(policy.service)}`, { enabled: !policy.enabled })
+      setServicePolicies(response.data.policies || [])
+      setServicePolicyMsg('Die 2FA-Einstellung wurde gespeichert.')
+    } catch (err: any) {
+      setServicePolicyMsg(err.response?.data?.message || 'Die 2FA-Einstellung konnte nicht gespeichert werden.')
+    } finally {
+      setServicePolicyLoading(null)
     }
   }
 
@@ -336,6 +365,27 @@ export default function AccountPage() {
           )}
         </div>
 
+        )}
+
+        {!isSetup && servicePolicies.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center"><Shield className="w-5 h-5 text-indigo-600" /></div>
+              <div><h2 className="font-semibold text-gray-800">2FA je Dienst</h2><p className="text-xs text-gray-400">Vertrauenswürdige Geräte bleiben 30 Tage bestätigt.</p></div>
+            </div>
+            {servicePolicyMsg && <p className="mb-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">{servicePolicyMsg}</p>}
+            <div className="divide-y divide-gray-100">
+              {servicePolicies.map(policy => (
+                <div key={policy.service} className="flex items-center justify-between gap-4 py-3">
+                  <div><p className="text-sm font-medium text-gray-800">{policy.label}</p>{policy.locked && <p className="text-xs text-gray-400">Durch Sicherheitsrichtlinie vorgeschrieben</p>}</div>
+                  <button type="button" role="switch" aria-checked={policy.enabled} disabled={policy.locked || servicePolicyLoading === policy.service} onClick={() => handleServicePolicyChange(policy)} className={`relative h-6 w-11 rounded-full transition ${policy.enabled ? 'bg-blue-600' : 'bg-gray-300'} disabled:cursor-not-allowed disabled:opacity-60`}>
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${policy.enabled ? 'left-[22px]' : 'left-0.5'}`} />
+                    <span className="sr-only">2FA für {policy.label} {policy.enabled ? 'deaktivieren' : 'aktivieren'}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {!isSetup && (

@@ -15,7 +15,8 @@ export default function RegisterPage() {
     email: loginHint,
     password: '',
     confirmPassword: '',
-    name: '',
+    firstName: '',
+    lastName: '',
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -49,8 +50,8 @@ export default function RegisterPage() {
     setError('')
 
     // Validation
-    if (!formData.email || !formData.password) {
-      setError('E-Mail und Passwort sind erforderlich')
+    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email || !formData.password) {
+      setError('Vorname, Nachname, E-Mail und Passwort sind erforderlich')
       return
     }
 
@@ -78,7 +79,8 @@ export default function RegisterPage() {
         formFields: [
           { id: 'email', value: formData.email },
           { id: 'password', value: formData.password },
-          ...(formData.name ? [{ id: 'name', value: formData.name }] : []),
+          { id: 'first_name', value: formData.firstName.trim() },
+          { id: 'last_name', value: formData.lastName.trim() },
         ],
       }, {
         headers: { 'x-turnstile-token': turnstileToken },
@@ -156,23 +158,17 @@ export default function RegisterPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Name (optional) */}
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-            Name <span className="text-gray-400">(optional)</span>
-          </label>
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              id="name"
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Ihr Name"
-              className="auth-input pl-11"
-              disabled={isLoading}
-              autoComplete="name"
-            />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">Vorname <span className="text-red-500">*</span></label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input id="firstName" type="text" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} placeholder="Vorname" className="auth-input pl-11" disabled={isLoading} autoComplete="given-name" maxLength={100} required />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">Nachname <span className="text-red-500">*</span></label>
+            <input id="lastName" type="text" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} placeholder="Nachname" className="auth-input" disabled={isLoading} autoComplete="family-name" maxLength={100} required />
           </div>
         </div>
 

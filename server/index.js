@@ -23,6 +23,7 @@ const {
   isBetterAssistRegistrationHandoff,
   updateProvisionedServices,
 } = require('./service-access')
+const { buildShadowObservation } = require('./control-plane-shadow')
 const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
 const QRCode = require('qrcode')
@@ -31,6 +32,7 @@ const {
   createHandoffV2Token,
   verifyAndConsumeHandoffV2Token,
 } = require('./handoff-v2')
+const { readCompleteProfile, validateProfileNames } = require('./profile-fields')
 const {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -87,6 +89,19 @@ const passkeyStorePath = process.env.PASSKEY_STORE_PATH || (
 const cpBridgeApiUrl = (process.env.CP_BRIDGE_API_URL || process.env.HOSTING_BRIDGE_API_URL || '').replace(/\/+$/, '')
 const cpBridgeApiKey = process.env.CP_BRIDGE_API_KEY || process.env.HOSTING_BRIDGE_API_KEY || ''
 const crmServicesApiUrl = (process.env.CRM_SERVICES_API_URL || 'https://crm.10hoch2.de/api/internal/auth/services').replace(/\/+$/, '')
+const crmControlPlaneAccessUrl = (
+  process.env.CRM_CONTROL_PLANE_ACCESS_URL
+  || 'https://crm.10hoch2.de/api/internal/control-plane/v2/access'
+).replace(/\/+$/, '')
+const crmSecurityPoliciesUrl = (
+  process.env.CRM_CONTROL_PLANE_SECURITY_URL
+  || 'https://crm.10hoch2.de/api/internal/control-plane/v2/security-policies'
+).replace(/\/+$/, '')
+const crmProfileUrl = (
+  process.env.CRM_CONTROL_PLANE_PROFILE_URL
+  || 'https://crm.10hoch2.de/api/internal/control-plane/v2/profile'
+).replace(/\/+$/, '')
+const crmControlPlaneShadowEnabled = process.env.CRM_CONTROL_PLANE_SHADOW_ENABLED !== 'false'
 const crmServicesApiKey = process.env.CRM_SERVICES_API_KEY || process.env.AUTH_INTERNAL_API_KEY || process.env.INTERNAL_PROVISION_SECRET || ''
 const internalProvisionSecret = requireSecret('INTERNAL_PROVISION_SECRET')
 const internalHandoffSecrets = new Set([
@@ -106,9 +121,10 @@ const customerSecurityDeadline = new Date(
   process.env.CUSTOMER_SECURITY_DEADLINE || '2026-10-01T00:00:00+02:00'
 )
 const trustedMfaCookieName = 'zhz_trusted_mfa_device'
-const trustedMfaMaxAgeMs = Math.max(1, Number(process.env.TRUSTED_MFA_DEVICE_DAYS || 90)) * 24 * 60 * 60 * 1000
+const trustedMfaMaxAgeMs = Math.max(1, Number(process.env.TRUSTED_MFA_DEVICE_DAYS || 30)) * 24 * 60 * 60 * 1000
 const emailMfaChallenges = new Map()
 const emailMfaRequestWindows = new Map()
+const crmShadowObservationCache = new Map()
 
 function trustedMfaSignature(payload) {
   return crypto.createHmac('sha256', handoffSecret).update(payload).digest('base64url')
@@ -227,7 +243,18 @@ supertokens.init({
         formFields: [
           { id: 'email' },
           { id: 'password' },
-          { id: 'name', optional: true },
+          {
+            id: 'first_name',
+            validate: async value => validateProfileNames(value, 'placeholder').ok
+              ? undefined
+              : 'Bitte geben Sie Ihren Vornamen an.',
+          },
+          {
+            id: 'last_name',
+            validate: async value => validateProfileNames('placeholder', value).ok
+              ? undefined
+              : 'Bitte geben Sie Ihren Nachnamen an.',
+          },
         ],
       },
       override: {
@@ -248,19 +275,33 @@ supertokens.init({
           signUpPOST: async (input) => {
             const result = await original.signUpPOST(input)
             if (result.status === 'OK') {
-              // Name aus formFields holen und in UserMetadata speichern
-              const name = input.formFields.find(f => f.id === 'name')?.value
-              if (name) {
+              const profile = validateProfileNames(
+                input.formFields.find(f => f.id === 'first_name')?.value,
+                input.formFields.find(f => f.id === 'last_name')?.value
+              )
+              if (profile.ok) {
                 try {
-                  await UserMetadata.updateUserMetadata(result.user.id, { name })
+                  await UserMetadata.updateUserMetadata(result.user.id, {
+                    firstName: profile.firstName,
+                    lastName: profile.lastName,
+                    name: profile.name,
+                  })
                 } catch (_) {}
               }
               const email = result.user.emails?.[0] || input.formFields.find(f => f.id === 'email')?.value
               if (email) {
                 try {
-                  await notifyNewCentralRegistration({ email, name, authUserId: result.user.id })
+                  await notifyNewCentralRegistration({ email, name: profile.ok ? profile.name : '', authUserId: result.user.id })
                 } catch (error) {
                   console.error('[Registration notification]', error.message)
+                }
+                if (profile.ok) {
+                  void syncCrmIdentityProfile({
+                    email,
+                    authUserId: result.user.id,
+                    firstName: profile.firstName,
+                    lastName: profile.lastName,
+                  }).catch(() => false)
                 }
               }
             }
@@ -677,6 +718,7 @@ async function getSecurityProfile(userId, roleHint = '') {
   const passkeyConfigured = readPasskeyStore().passkeys.some(passkey =>
     users.some(user => user.id === passkey.userId) && passkey.rpId === passkeyRpId
   )
+  const identityProfile = readCompleteProfile(metadataEntries)
 
   let role = roleHint || 'customer'
   if (!roleHint) {
@@ -705,6 +747,10 @@ async function getSecurityProfile(userId, roleHint = '') {
     userId,
     email,
     role,
+    profileComplete: identityProfile.ok,
+    firstName: identityProfile.firstName || '',
+    lastName: identityProfile.lastName || '',
+    name: identityProfile.name || '',
     users,
     passwordUser: passwordEntry?.user || null,
     passwordConfigured,
@@ -872,7 +918,79 @@ async function crmServiceAccess(email, authUserId) {
   })
   if (!response.ok) return null
   const payload = await response.json()
-  return payload?.access || null
+  const access = payload?.access || null
+  observeCrmControlPlaneAccess(email, authUserId, access)
+  return access
+}
+
+async function crmServiceSecurityPolicies(email, authUserId, update = null) {
+  if (!crmSecurityPoliciesUrl || !crmServicesApiKey || !email || !authUserId) return null
+  const response = await fetch(crmSecurityPoliciesUrl, {
+    method: update ? 'PUT' : 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-api-key': crmServicesApiKey,
+    },
+    body: JSON.stringify({ email, authUserId, ...(update || {}) }),
+    timeout: 5000,
+  })
+  if (!response.ok) return null
+  return response.json()
+}
+
+async function syncCrmIdentityProfile({ email, authUserId, firstName, lastName }) {
+  if (!crmProfileUrl || !crmServicesApiKey || !email || !authUserId) return false
+  const response = await fetch(crmProfileUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'x-internal-api-key': crmServicesApiKey },
+    body: JSON.stringify({ email, authUserId, firstName, lastName }),
+    timeout: 5000,
+  })
+  return response.ok
+}
+
+function normalizeServiceContext(value) {
+  const service = String(value || '').trim().toLowerCase()
+  const aliases = {
+    'crm.10hoch2.de': 'crm',
+    'crm.cp.zhzcloud.de': 'crm',
+    'cp.zhzcloud.de': 'hosting-panel',
+    'web.zhzcloud.de': 'access-portal',
+    'v2.betterassist.me': 'betterassist',
+    'app1.betterassist.me': 'betterassist',
+    'login.eazyfind.me': 'eazyfind',
+  }
+  return aliases[service] || service
+}
+
+function observeCrmControlPlaneAccess(email, authUserId, enforcedAccess) {
+  if (!crmControlPlaneShadowEnabled || !crmControlPlaneAccessUrl || !crmServicesApiKey || !email) return
+  const identityHash = crypto.createHash('sha256').update(String(authUserId || email)).digest('hex').slice(0, 16)
+  const now = Date.now()
+  if ((crmShadowObservationCache.get(identityHash) || 0) > now - 5 * 60 * 1000) return
+  crmShadowObservationCache.set(identityHash, now)
+
+  void fetch(crmControlPlaneAccessUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-api-key': crmServicesApiKey,
+    },
+    body: JSON.stringify({ email, authUserId }),
+    timeout: 5000,
+  })
+    .then(async response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const payload = await response.json()
+      const observation = buildShadowObservation(enforcedAccess, payload?.decision)
+      console.info('[CRM control-plane shadow]', { identityHash, ...observation })
+    })
+    .catch(error => {
+      console.warn('[CRM control-plane shadow] lookup failed:', {
+        identityHash,
+        message: error.message,
+      })
+    })
 }
 
 async function notifyNewCentralRegistration({ email, name, authUserId }) {
@@ -1039,7 +1157,12 @@ async function handleSignout(req, res) {
   }
   try {
     if (req.session) {
-      try { await req.session.revokeSession() } catch (_) {}
+      try {
+        const profile = await getSecurityProfile(req.session.getUserId())
+        await Promise.all(profile.users.map(user => Session.revokeAllSessionsForUser(user.id)))
+      } catch (_) {
+        try { await req.session.revokeSession() } catch (_) {}
+      }
     }
     clearSessionCookies(res)
     if (redirectAfterSignout()) return
@@ -1559,6 +1682,14 @@ app.get('/auth/onboarding/status', verifySession(), async (req, res) => {
     const profile = await getSecurityProfile(userId, payload?.role || 'customer')
     const trustedDevice = isTrustedMfaDevice(req, userId)
     const mfaDone = !!payload?.mfaDone || hasRecentPasskeyLogin(userId) || trustedDevice
+    const requestedService = normalizeServiceContext(req.query?.service)
+    let serviceMfaRequired = null
+    if (requestedService && profile.email) {
+      const securityPayload = await crmServiceSecurityPolicies(profile.email, userId)
+      const policy = securityPayload?.policies?.find(candidate => candidate.service === requestedService)
+      if (policy) serviceMfaRequired = policy.enabled === true
+    }
+    const effectiveMfaRequiredNow = serviceMfaRequired ?? profile.mfaRequiredNow
     if (trustedDevice && !payload?.mfaDone) {
       await req.session.mergeIntoAccessTokenPayload({ mfaDone: true })
     }
@@ -1569,6 +1700,9 @@ app.get('/auth/onboarding/status', verifySession(), async (req, res) => {
     res.json({
       status: 'OK',
       role: profile.role,
+      profileComplete: profile.profileComplete,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
       passwordConfigured: profile.passwordConfigured,
       passwordRequiredNow: profile.passwordRequiredNow,
       canSkipPassword: !profile.passwordRequiredNow && profile.role === 'customer',
@@ -1577,10 +1711,84 @@ app.get('/auth/onboarding/status', verifySession(), async (req, res) => {
       mfaDone,
       authMethod: payload?.authMethod || 'unknown',
       passwordLoginRequired,
-      mfaRequiredNow: profile.mfaRequiredNow,
-      canSkipMfa: !profile.mfaRequiredNow && profile.role === 'customer',
+      mfaRequiredNow: effectiveMfaRequiredNow,
+      canSkipMfa: !effectiveMfaRequiredNow && profile.role === 'customer',
+      service: requestedService || null,
       deadline: customerSecurityDeadline.toISOString(),
     })
+  } catch (err) {
+    res.status(500).json({ status: 'ERROR', message: err.message })
+  }
+})
+
+app.get('/auth/security/service-policies', verifySession(), async (req, res) => {
+  try {
+    const userId = req.session.getUserId()
+    const user = await supertokens.getUser(userId)
+    const email = user?.emails?.[0] || ''
+    const policiesPayload = await crmServiceSecurityPolicies(email, userId)
+    if (!policiesPayload?.policies) {
+      return res.status(409).json({ status: 'UNAVAILABLE', message: 'Das zentrale Benutzerkonto ist noch nicht mit dem CRM verknüpft.' })
+    }
+    let meta = {}
+    try { meta = (await UserMetadata.getUserMetadata(userId)).metadata || {} } catch (_) {}
+    const services = new Set(await detectProvisionedServices(email, meta.provisionedServices || [], userId))
+    services.add('auth')
+    res.json({
+      status: 'OK',
+      policies: policiesPayload.policies.filter(policy => services.has(policy.service)),
+    })
+  } catch (err) {
+    res.status(500).json({ status: 'ERROR', message: err.message })
+  }
+})
+
+app.put('/auth/security/service-policies/:service', verifySession(), async (req, res) => {
+  try {
+    const userId = req.session.getUserId()
+    const user = await supertokens.getUser(userId)
+    const email = user?.emails?.[0] || ''
+    const service = normalizeServiceContext(req.params.service)
+    const enabled = req.body?.enabled
+    if (typeof enabled !== 'boolean') return res.status(400).json({ status: 'ERROR', message: 'Ungültige Einstellung.' })
+    const access = await crmServiceAccess(email, userId)
+    const allowedServices = new Set(access?.services || [])
+    allowedServices.add('auth')
+    if (!allowedServices.has(service)) return res.status(403).json({ status: 'ERROR', message: 'Der Dienst ist für dieses Konto nicht freigegeben.' })
+    const policiesPayload = await crmServiceSecurityPolicies(email, userId, { service, enabled })
+    if (!policiesPayload?.policies) {
+      return res.status(409).json({ status: 'ERROR', message: 'Die Einstellung ist zentral vorgegeben oder das Konto ist noch nicht verknüpft.' })
+    }
+    res.json({ status: 'OK', policies: policiesPayload.policies.filter(policy => allowedServices.has(policy.service)) })
+  } catch (err) {
+    res.status(500).json({ status: 'ERROR', message: err.message })
+  }
+})
+
+app.post('/auth/onboarding/profile', verifySession(), async (req, res) => {
+  try {
+    const userId = req.session.getUserId()
+    const profile = await getSecurityProfile(userId, req.session.getAccessTokenPayload()?.role || 'customer')
+    const names = validateProfileNames(req.body?.firstName, req.body?.lastName)
+    if (!names.ok) return res.status(400).json({ status: 'ERROR', message: names.message })
+
+    for (const linkedUser of profile.users) {
+      await UserMetadata.updateUserMetadata(linkedUser.id, {
+        firstName: names.firstName,
+        lastName: names.lastName,
+        name: names.name,
+      })
+    }
+    await req.session.mergeIntoAccessTokenPayload({ name: names.name })
+    const crmSynced = profile.email
+      ? await syncCrmIdentityProfile({
+        email: profile.email,
+        authUserId: userId,
+        firstName: names.firstName,
+        lastName: names.lastName,
+      }).catch(() => false)
+      : false
+    res.json({ status: 'OK', firstName: names.firstName, lastName: names.lastName, name: names.name, crmSynced })
   } catch (err) {
     res.status(500).json({ status: 'ERROR', message: err.message })
   }

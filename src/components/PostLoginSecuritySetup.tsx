@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, KeyRound, Loader, Mail, ShieldCheck, Smartphone } from 'lucide-react'
+import { AlertTriangle, KeyRound, Loader, Mail, ShieldCheck, Smartphone, User } from 'lucide-react'
 import api from '../utils/api'
 
 export interface SecuritySetupStatus {
   role: string
+  profileComplete: boolean
+  firstName: string
+  lastName: string
   passwordConfigured: boolean
   passwordRequiredNow: boolean
   canSkipPassword: boolean
@@ -17,23 +20,27 @@ export interface SecuritySetupStatus {
   deadline: string
 }
 
-type Step = 'password' | 'mfa-choice' | 'mfa-login-choice' | 'totp-setup' | 'totp-challenge' | 'email-code'
+type Step = 'profile' | 'password' | 'mfa-choice' | 'mfa-login-choice' | 'totp-setup' | 'totp-challenge' | 'email-code'
 
 interface Props {
   initialStatus: SecuritySetupStatus
   onComplete: () => void
+  serviceContext?: string
 }
 
 function nextMfaStep(status: SecuritySetupStatus): Step | null {
   if (!status.mfaConfigured) return 'mfa-choice'
-  if (status.mfaDone || status.mfaMethod === 'passkey') return null
-  return status.mfaMethod === 'email' ? 'email-code' : 'mfa-login-choice'
+  if (status.mfaDone) return null
+  if (status.mfaMethod === 'email' || status.mfaMethod === 'passkey') return 'email-code'
+  return 'mfa-login-choice'
 }
 
-export default function PostLoginSecuritySetup({ initialStatus, onComplete }: Props) {
+export default function PostLoginSecuritySetup({ initialStatus, onComplete, serviceContext }: Props) {
   const customerNeedsPassword = initialStatus.role === 'customer' && !initialStatus.passwordConfigured
   const [status, setStatus] = useState(initialStatus)
-  const [step, setStep] = useState<Step>(() => customerNeedsPassword ? 'password' : (nextMfaStep(initialStatus) || 'mfa-choice'))
+  const [step, setStep] = useState<Step>(() => !initialStatus.profileComplete ? 'profile' : customerNeedsPassword ? 'password' : (nextMfaStep(initialStatus) || 'mfa-choice'))
+  const [firstName, setFirstName] = useState(initialStatus.firstName || '')
+  const [lastName, setLastName] = useState(initialStatus.lastName || '')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [code, setCode] = useState('')
@@ -43,7 +50,9 @@ export default function PostLoginSecuritySetup({ initialStatus, onComplete }: Pr
   const [emailSent, setEmailSent] = useState(false)
 
   const refreshStatus = async () => {
-    const response = await api.get('/auth/onboarding/status')
+    const response = await api.get('/auth/onboarding/status', {
+      params: serviceContext ? { service: serviceContext } : undefined,
+    })
     setStatus(response.data)
     return response.data as SecuritySetupStatus
   }
@@ -53,6 +62,28 @@ export default function PostLoginSecuritySetup({ initialStatus, onComplete }: Pr
     const next = nextMfaStep(updated)
     if (next) setStep(next)
     else onComplete()
+  }
+
+  const saveProfile = async () => {
+    setError('')
+    if (!firstName.trim() || !lastName.trim()) return setError('Vorname und Nachname sind erforderlich.')
+    setLoading(true)
+    try {
+      const response = await api.post('/auth/onboarding/profile', { firstName, lastName })
+      if (response.data.status !== 'OK') throw new Error(response.data.message || 'Die Profildaten konnten nicht gespeichert werden.')
+      const updated = await refreshStatus()
+      const needsPassword = updated.role === 'customer' && !updated.passwordConfigured
+      if (needsPassword) setStep('password')
+      else {
+        const next = nextMfaStep(updated)
+        if (next) setStep(next)
+        else onComplete()
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Die Profildaten konnten nicht gespeichert werden.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const setNewPassword = async () => {
@@ -154,6 +185,13 @@ export default function PostLoginSecuritySetup({ initialStatus, onComplete }: Pr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        {step === 'profile' && (
+          <>
+            <div className="mb-5 flex items-center gap-3"><User className="h-7 w-7 text-blue-600" /><div><h2 className="text-xl font-semibold text-slate-900">Profildaten vervollständigen</h2><p className="text-sm text-slate-500">Für persönliche Zugänge und Vertragsunterlagen benötigen wir Ihren Vor- und Nachnamen.</p></div></div>
+            <div className="grid gap-3 sm:grid-cols-2"><input className="auth-input" autoComplete="given-name" maxLength={100} placeholder="Vorname" value={firstName} onChange={event => setFirstName(event.target.value)} /><input className="auth-input" autoComplete="family-name" maxLength={100} placeholder="Nachname" value={lastName} onChange={event => setLastName(event.target.value)} /></div>
+            <button className="auth-button mt-5" disabled={loading} onClick={saveProfile}>{loading && <Loader className="h-4 w-4 animate-spin" />} Profildaten speichern</button>
+          </>
+        )}
         {step === 'password' && (
           <>
             <div className="mb-5 flex items-center gap-3"><KeyRound className="h-7 w-7 text-blue-600" /><div><h2 className="text-xl font-semibold text-slate-900">Jetzt Passwort festlegen</h2><p className="text-sm text-slate-500">Schützen Sie Ihren Zugang zusätzlich mit einem persönlichen Passwort.</p></div></div>
@@ -198,7 +236,7 @@ export default function PostLoginSecuritySetup({ initialStatus, onComplete }: Pr
                 <span className="text-sm text-slate-500">Einmalcode an Ihre E-Mail-Adresse senden</span>
               </button>
             </div>
-            <p className="mt-4 text-center text-xs text-slate-500">Nach erfolgreicher Bestätigung bleibt dieses Gerät 90 Tage vertrauenswürdig.</p>
+            <p className="mt-4 text-center text-xs text-slate-500">Nach erfolgreicher Bestätigung bleibt dieses Gerät 30 Tage vertrauenswürdig.</p>
           </>
         )}
 
