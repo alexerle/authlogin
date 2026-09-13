@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, BarChart3, Settings, LogOut, User,
   Globe, Headphones, Building2, ChevronRight, Loader,
-  Shield, AlertCircle, UsersRound, Briefcase, FileSignature, Bot,
+  Shield, AlertCircle, UsersRound, Briefcase, FileSignature, Bot, LayoutGrid, ExternalLink,
 } from 'lucide-react'
 import Logo from '../components/Logo'
 import api from '../utils/api'
@@ -74,7 +74,7 @@ const ALL_SERVICES: ServiceDef[] = [
   },
   {
     id: 'access-portal',
-    name: 'ZHZ Access Portal',
+    name: 'Access Portal',
     description: 'Sichere Server- und App-Zugriffe',
     url: 'https://web.zhzcloud.de',
     ssoCallbackUrl: 'https://web.zhzcloud.de/api/access/sso',
@@ -194,6 +194,7 @@ export default function ServicesPage() {
   const [user, setUser] = useState<UserInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [openingService, setOpeningService] = useState<string | null>(null)
+  const [serviceMenuOpen, setServiceMenuOpen] = useState(false)
 
   // TOTP Challenge State
   const [totpCode, setTotpCode] = useState(['', '', '', '', '', ''])
@@ -377,6 +378,35 @@ export default function ServicesPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setServiceMenuOpen(value => !value)}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                title="Dienste wechseln"
+                aria-label="Dienste wechseln"
+                aria-expanded={serviceMenuOpen}
+              >
+                <LayoutGrid size={18} />
+              </button>
+              {serviceMenuOpen && (
+                <div className="absolute right-0 top-11 z-50 w-64 overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-xl">
+                  <div className="border-b border-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Dienste</div>
+                  <div className="p-1">
+                    {visibleServices.map(service => (
+                      <button key={service.id} type="button" onClick={() => { setServiceMenuOpen(false); void handleServiceClick(service) }} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950">
+                        <span className={service.color}>{service.icon}</span><span className="flex-1">{service.name}</span><ExternalLink size={14} className="text-slate-400" />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="border-t border-slate-100 p-1">
+                    <button type="button" onClick={() => { setServiceMenuOpen(false); navigate('/account') }} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950">
+                      <User size={18} className="text-slate-500" /><span className="flex-1">My Account</span><ChevronRight size={14} className="text-slate-400" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-gray-800">{user?.name || user?.email}</p>
               {user?.name && <p className="text-xs text-gray-400">{user.email}</p>}
