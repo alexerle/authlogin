@@ -34,7 +34,7 @@ const {
 } = require('./handoff-v2')
 const { readCompleteProfile, validateProfileNames } = require('./profile-fields')
 const { configuredLogoutEndpoints, nextLogoutUrl, safeFinalUrl } = require('./logout-chain')
-const { resolveServiceMfaRequirement } = require('./security-policy')
+const { resolveServiceMfaRequirement, resolveServiceSecurityCompliance } = require('./security-policy')
 const {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -1209,6 +1209,19 @@ app.get('/auth/session/user', verifySession(), async (req, res) => {
     const securityCompliant = (!security.passwordRequiredNow || security.passwordConfigured)
       && !passwordLoginRequired
       && (!security.mfaRequiredNow || sessionMfaDone)
+    const requestedService = normalizeServiceContext(req.query?.service)
+    const servicePolicies = requestedService
+      ? await crmServiceSecurityPolicies(email, userId)
+      : null
+    const serviceSecurity = requestedService
+      ? resolveServiceSecurityCompliance({
+          security,
+          sessionMfaDone,
+          passwordLoginRequired,
+          policiesPayload: servicePolicies,
+          service: requestedService,
+        })
+      : null
     res.json({
       status: 'OK',
       user: {
@@ -1225,6 +1238,9 @@ app.get('/auth/session/user', verifySession(), async (req, res) => {
         passwordRequiredNow: security.passwordRequiredNow,
         passwordLoginRequired,
         securityCompliant,
+        service: requestedService || null,
+        serviceMfaRequired: serviceSecurity?.mfaRequired ?? null,
+        serviceSecurityCompliant: serviceSecurity?.compliant ?? null,
         services,
       },
     })

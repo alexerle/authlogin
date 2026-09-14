@@ -4,4 +4,24 @@ function resolveServiceMfaRequirement(profileRequired, policiesPayload, service)
   return policy ? policy.enabled === true : profileRequired === true
 }
 
-module.exports = { resolveServiceMfaRequirement }
+function resolveServiceSecurityCompliance({
+  security,
+  sessionMfaDone,
+  passwordLoginRequired,
+  policiesPayload,
+  service,
+}) {
+  const mfaRequired = resolveServiceMfaRequirement(
+    security?.mfaRequiredNow,
+    policiesPayload,
+    service,
+  )
+  return {
+    mfaRequired,
+    compliant: (!security?.passwordRequiredNow || security?.passwordConfigured === true)
+      && passwordLoginRequired !== true
+      && (!mfaRequired || sessionMfaDone === true),
+  }
+}
+
+module.exports = { resolveServiceMfaRequirement, resolveServiceSecurityCompliance }
