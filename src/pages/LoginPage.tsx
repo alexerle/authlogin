@@ -52,7 +52,7 @@ export default function LoginPage() {
       return ''
     }
   })()
-  const handoffDomains = ['crm.10hoch2.de', 'crm.cp.zhzcloud.de', 'cp.zhzcloud.de', 'web.zhzcloud.de', 'zhzcloud.de', 'login.eazyfind.me', 'v2.betterassist.me', 'app1.betterassist.me']
+  const handoffDomains = ['crm.10hoch2.de', 'crm.cp.zhzcloud.de', 'cp.zhzcloud.de', 'web.zhzcloud.de', 'zhzcloud.de', 'login.eazyfind.me', 'de01.eazyfind.me', 'v2.betterassist.me', 'app1.betterassist.me']
   const needsHandoff = handoffDomains.includes(redirectTargetHost) || handoffDomains.includes(serviceName)
 
   const [email, setEmail] = useState(loginHint)
@@ -131,8 +131,17 @@ export default function LoginPage() {
 
   const completeHandoff = async () => {
     const targetDomain = redirectTargetHost || serviceName || 'crm.10hoch2.de'
-    const res = await api.post('/auth/handoff-token', { targetDomain, purpose: handoffPurpose })
-    if (res.data.status !== 'OK' || !res.data.token) {
+    let res
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        res = await api.post('/auth/handoff-token', { targetDomain, purpose: handoffPurpose })
+        break
+      } catch (error: any) {
+        const retryable = !error?.response || error.response.status >= 500
+        if (!retryable || attempt === 1) throw error
+      }
+    }
+    if (!res || res.data.status !== 'OK' || !res.data.token) {
       throw new Error('SSO handoff failed')
     }
 
@@ -149,10 +158,10 @@ export default function LoginPage() {
       window.location.href = 'https://web.zhzcloud.de/?legacy=1&sso_error=no_service_access'
     } else if (redirectTargetHost === 'v2.betterassist.me' || redirectTargetHost === 'app1.betterassist.me') {
       window.location.href = `https://${redirectTargetHost}/auth/login?error=sso_failed`
-    } else if (redirectTargetHost === 'login.eazyfind.me') {
-      window.location.href = 'https://login.eazyfind.me/login?error=sso_failed'
+    } else if (redirectTargetHost === 'login.eazyfind.me' || redirectTargetHost === 'de01.eazyfind.me') {
+      setError('Die zentrale Eazyfind-Anmeldung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.')
     } else {
-      window.location.href = crmFallback
+      setError('Die zentrale Dienstfreigabe konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.')
     }
   }
 

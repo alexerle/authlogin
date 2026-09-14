@@ -215,6 +215,7 @@ const allowedOrigins = [
   'https://cp.zhzcloud.de',
   'https://zhzcloud.de',
   'https://login.eazyfind.me',
+  'https://de01.eazyfind.me',
   'https://eazyfind.me',
   'https://search01.eazyfind.me',
   'https://portal.10hoch2.de',
@@ -971,6 +972,7 @@ function normalizeServiceContext(value) {
     'v2.betterassist.me': 'betterassist',
     'app1.betterassist.me': 'betterassist',
     'login.eazyfind.me': 'eazyfind',
+    'de01.eazyfind.me': 'eazyfind',
   }
   return aliases[service] || service
 }
@@ -1481,7 +1483,7 @@ app.post('/auth/handoff-token', verifySession(), async (req, res) => {
 })
 
 const allowedHandoffTargets = [
-  'cp.zhzcloud.de', 'web.zhzcloud.de', 'zhzcloud.de', 'login.eazyfind.me',
+  'cp.zhzcloud.de', 'web.zhzcloud.de', 'zhzcloud.de', 'login.eazyfind.me', 'de01.eazyfind.me',
   'portal.10hoch2.de', 'admin.10hoch2.de',
   'crm.cp.zhzcloud.de', 'crm.10hoch2.de', 'auth.10hoch2.de',
   ...(betterAssistHandoffV2Enabled ? [...betterAssistHandoffV2Targets] : []),
@@ -1496,6 +1498,7 @@ const handoffServiceByDomain = {
   'portal.10hoch2.de': 'crm',
   'admin.10hoch2.de': 'crm',
   'login.eazyfind.me': 'eazyfind',
+  'de01.eazyfind.me': 'eazyfind',
   ...(betterAssistHandoffV2Enabled
     ? Object.fromEntries([...betterAssistHandoffV2Targets].map(domain => [domain, 'betterassist']))
     : {}),
@@ -1508,6 +1511,7 @@ const allowedHandoffNextHosts = [
   'analytics.10hoch2.de',
   'sign.10hoch2.de',
   'login.eazyfind.me',
+  'de01.eazyfind.me',
   'eazyfind.me',
 ]
 

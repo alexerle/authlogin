@@ -4,7 +4,7 @@ const DEFAULT_LOGOUT_ENDPOINTS = [
   'https://web.zhzcloud.de/auth/central-logout',
   'https://app1.betterassist.me/auth/central-logout',
   'https://v2.betterassist.me/auth/central-logout',
-  'https://login.eazyfind.me/central-logout',
+  'https://de01.eazyfind.me/central-logout',
 ]
 
 function safeFinalUrl(value, websiteDomain) {

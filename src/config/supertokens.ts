@@ -36,6 +36,7 @@ export const config = getConfig()
 export const ALLOWED_REDIRECT_DOMAINS = [
   'eazyfind.me',
   'login.eazyfind.me',
+  'de01.eazyfind.me',
   'search01.eazyfind.me',
   'cp.zhzcloud.de',
   'web.zhzcloud.de',
