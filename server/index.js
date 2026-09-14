@@ -34,6 +34,7 @@ const {
 } = require('./handoff-v2')
 const { readCompleteProfile, validateProfileNames } = require('./profile-fields')
 const { configuredLogoutEndpoints, nextLogoutUrl, safeFinalUrl } = require('./logout-chain')
+const { resolveServiceMfaRequirement } = require('./security-policy')
 const {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -1416,13 +1417,22 @@ app.post('/auth/handoff-token', verifySession(), async (req, res) => {
       && securityProfile.passwordConfigured
       && payload?.authMethod === 'passwordless'
     const centrallyManagedSecurity = targetDomain !== 'web.zhzcloud.de'
+    const requiredService = handoffServiceByDomain[targetDomain]
+    const securityPolicies = centrallyManagedSecurity && requiredService
+      ? await crmServiceSecurityPolicies(securityProfile.email, userId)
+      : null
+    const mfaRequiredForService = resolveServiceMfaRequirement(
+      securityProfile.mfaRequiredNow,
+      securityPolicies,
+      requiredService,
+    )
     if (centrallyManagedSecurity && securityProfile.passwordRequiredNow && !securityProfile.passwordConfigured) {
       return res.status(403).json({ status: 'PASSWORD_SETUP_REQUIRED', message: 'Bitte legen Sie zuerst ein Passwort fest.' })
     }
     if (centrallyManagedSecurity && passwordLoginRequired) {
       return res.status(403).json({ status: 'PASSWORD_LOGIN_REQUIRED', message: 'Bitte melden Sie sich mit Ihrem Passwort an und bestätigen Sie danach den zweiten Faktor.' })
     }
-    if (centrallyManagedSecurity && securityProfile.mfaRequiredNow && !sessionMfaDone) {
+    if (centrallyManagedSecurity && mfaRequiredForService && !sessionMfaDone) {
       return res.status(403).json({ status: 'MFA_REQUIRED', message: 'Bitte bestätigen Sie die Anmeldung mit Ihrem zweiten Faktor.' })
     }
 
@@ -1446,7 +1456,6 @@ app.post('/auth/handoff-token', verifySession(), async (req, res) => {
 
     const user = await supertokens.getUser(userId)
     const email = user?.emails?.[0] || ''
-    const requiredService = handoffServiceByDomain[targetDomain]
     const betterAssistRegistration = isBetterAssistRegistrationHandoff(
       targetDomain,
       handoffPurpose,
