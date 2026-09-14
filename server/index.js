@@ -110,6 +110,7 @@ const internalHandoffSecrets = new Set([
   internalProvisionSecret,
   process.env.AUTH_INTERNAL_API_KEY,
   process.env.CRM_SERVICES_API_KEY,
+  process.env.BETTERASSIST_CRM_API_KEY,
 ].filter(Boolean))
 const turnstileSiteKey = process.env.TURNSTILE_SITE_KEY || ''
 const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY || ''
