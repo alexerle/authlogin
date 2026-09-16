@@ -2419,6 +2419,33 @@ app.get('/internal/users', async (req, res) => {
   }
 })
 
+// Read-only identity binding for trusted service backends. This deliberately
+// does not provision users, roles or service access: callers can only confirm
+// that an existing central user id still belongs to the asserted email.
+app.post('/internal/verify-user', async (req, res) => {
+  const secret = req.headers['x-provision-secret'] || req.headers['x-internal-api-key']
+  if (secret !== INTERNAL_PROVISION_SECRET) {
+    return res.status(401).json({ status: 'ERROR', message: 'Unauthorized' })
+  }
+
+  const userId = String(req.body?.userId || '').trim()
+  const expectedEmail = String(req.body?.email || '').trim().toLowerCase()
+  if (!userId || !expectedEmail || !expectedEmail.includes('@')) {
+    return res.status(400).json({ status: 'ERROR', message: 'userId and email required' })
+  }
+
+  try {
+    const user = await supertokens.getUser(userId)
+    const emails = (user?.emails || []).map((email) => String(email).trim().toLowerCase())
+    if (!user || !emails.includes(expectedEmail)) {
+      return res.status(404).json({ status: 'ERROR', message: 'Identity not found' })
+    }
+    return res.json({ status: 'OK', userId: user.id, email: expectedEmail })
+  } catch (err) {
+    return res.status(500).json({ status: 'ERROR', message: err.message })
+  }
+})
+
 app.delete('/internal/users/:userId', async (req, res) => {
   const secret = req.headers['x-provision-secret'] || req.headers['x-internal-api-key'] || req.body?.secret
   if (secret !== INTERNAL_PROVISION_SECRET) {
