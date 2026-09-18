@@ -111,7 +111,19 @@ test('rejects expired tokens and weak secrets', () => {
     secret,
     expectedTargetDomain: targetDomain,
     replayStore: new InMemoryHandoffV2ReplayStore(),
-    nowMs: nowMs + 61_000,
+    nowMs: nowMs + 301_000,
   }), /Invalid/)
   assert.throws(() => token({ secret: 'short' }), /32 bytes/)
+})
+
+test('allows the five-minute BetterAssist handoff window but no longer', () => {
+  const value = token()
+  assert.doesNotThrow(() => verifyAndConsumeHandoffV2Token({
+    token: value,
+    secret,
+    expectedTargetDomain: targetDomain,
+    replayStore: new InMemoryHandoffV2ReplayStore(),
+    nowMs: nowMs + 299_000,
+  }))
+  assert.throws(() => token({ ttlSeconds: 301 }), /Invalid handoff v2 lifetime/)
 })

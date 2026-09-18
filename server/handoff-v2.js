@@ -4,7 +4,7 @@ const path = require('path')
 
 const HANDOFF_V2_VERSION = 2
 const MAX_TOKEN_LENGTH = 4096
-const MAX_LIFETIME_SECONDS = 90
+const MAX_LIFETIME_SECONDS = 300
 
 function assertSecret(secret) {
   if (typeof secret !== 'string' || Buffer.byteLength(secret, 'utf8') < 32) {
@@ -109,7 +109,7 @@ function createHandoffV2Token({
   mfaDone = false,
   authMethod = 'unknown',
   nowMs = Date.now(),
-  ttlSeconds = 60,
+  ttlSeconds = 300,
   jti = crypto.randomUUID(),
 }) {
   assertSecret(secret)
