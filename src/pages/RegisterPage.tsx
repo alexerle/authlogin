@@ -298,9 +298,9 @@ export default function RegisterPage() {
       {/* Login Link */}
       <div className="mt-6 text-center">
         <span className="text-gray-600 text-sm">Bereits ein Konto? </span>
-        <Link to="/login" className="text-sm auth-link font-medium">
-          Jetzt anmelden
-        </Link>
+          <Link to={loginHref} className="text-sm auth-link font-medium">
+            Jetzt anmelden
+          </Link>
       </div>
     </AuthLayout>
   )
