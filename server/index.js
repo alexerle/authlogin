@@ -21,6 +21,7 @@ const { sendEmail } = require('./email')
 const {
   PROVISIONABLE_SERVICES,
   isBetterAssistRegistrationHandoff,
+  shouldLoadCrmSecurityPolicy,
   updateProvisionedServices,
 } = require('./service-access')
 const { buildShadowObservation } = require('./control-plane-shadow')
@@ -1436,7 +1437,11 @@ app.post('/auth/handoff-token', verifySession(), async (req, res) => {
       && payload?.authMethod === 'passwordless'
     const centrallyManagedSecurity = targetDomain !== 'web.zhzcloud.de'
     const requiredService = handoffServiceByDomain[targetDomain]
-    const securityPolicies = centrallyManagedSecurity && requiredService
+    const securityPolicies = shouldLoadCrmSecurityPolicy({
+      targetOrService: targetDomain,
+      purpose: handoffPurpose,
+      centrallyManaged: centrallyManagedSecurity,
+    }) && requiredService
       ? await crmServiceSecurityPolicies(securityProfile.email, userId)
       : null
     const mfaRequiredForService = resolveServiceMfaRequirement(
@@ -1725,8 +1730,16 @@ app.get('/auth/onboarding/status', verifySession(), async (req, res) => {
     const trustedDevice = isTrustedMfaDevice(req, userId)
     const mfaDone = !!payload?.mfaDone || hasRecentPasskeyLogin(userId) || trustedDevice
     const requestedService = normalizeServiceContext(req.query?.service)
+    const onboardingPurpose = req.query?.purpose === 'registration' ? 'registration' : ''
     let serviceMfaRequired = null
-    if (requestedService && profile.email) {
+    if (
+      requestedService
+      && profile.email
+      && shouldLoadCrmSecurityPolicy({
+        targetOrService: requestedService,
+        purpose: onboardingPurpose,
+      })
+    ) {
       const securityPayload = await crmServiceSecurityPolicies(profile.email, userId)
       const policy = securityPayload?.policies?.find(candidate => candidate.service === requestedService)
       if (policy) serviceMfaRequired = policy.enabled === true

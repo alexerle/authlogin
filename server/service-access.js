@@ -20,8 +20,21 @@ function isBetterAssistRegistrationHandoff(targetDomain, purpose) {
     && purpose === 'registration'
 }
 
+function isBetterAssistRegistrationContext(targetOrService, purpose) {
+  return ['betterassist', 'v2.betterassist.me', 'app1.betterassist.me'].includes(targetOrService)
+    && purpose === 'registration'
+}
+
+function shouldLoadCrmSecurityPolicy({ targetOrService, purpose, centrallyManaged = true }) {
+  return centrallyManaged
+    && Boolean(targetOrService)
+    && !isBetterAssistRegistrationContext(targetOrService, purpose)
+}
+
 module.exports = {
   PROVISIONABLE_SERVICES,
+  isBetterAssistRegistrationContext,
   updateProvisionedServices,
   isBetterAssistRegistrationHandoff,
+  shouldLoadCrmSecurityPolicy,
 }

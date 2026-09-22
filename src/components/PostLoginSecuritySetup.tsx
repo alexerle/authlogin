@@ -26,6 +26,7 @@ interface Props {
   initialStatus: SecuritySetupStatus
   onComplete: () => void
   serviceContext?: string
+  handoffPurpose?: 'registration'
 }
 
 function nextMfaStep(status: SecuritySetupStatus): Step | null {
@@ -35,7 +36,7 @@ function nextMfaStep(status: SecuritySetupStatus): Step | null {
   return 'mfa-login-choice'
 }
 
-export default function PostLoginSecuritySetup({ initialStatus, onComplete, serviceContext }: Props) {
+export default function PostLoginSecuritySetup({ initialStatus, onComplete, serviceContext, handoffPurpose }: Props) {
   const customerNeedsPassword = initialStatus.role === 'customer' && !initialStatus.passwordConfigured
   const [status, setStatus] = useState(initialStatus)
   const [step, setStep] = useState<Step>(() => !initialStatus.profileComplete ? 'profile' : customerNeedsPassword ? 'password' : (nextMfaStep(initialStatus) || 'mfa-choice'))
@@ -51,7 +52,7 @@ export default function PostLoginSecuritySetup({ initialStatus, onComplete, serv
 
   const refreshStatus = async () => {
     const response = await api.get('/auth/onboarding/status', {
-      params: serviceContext ? { service: serviceContext } : undefined,
+      params: serviceContext ? { service: serviceContext, purpose: handoffPurpose } : undefined,
     })
     setStatus(response.data)
     return response.data as SecuritySetupStatus

@@ -238,7 +238,7 @@ export default function LoginPage() {
         return
       }
       const response = await api.get('/auth/onboarding/status', {
-        params: serviceName ? { service: serviceName } : undefined,
+        params: serviceName ? { service: serviceName, purpose: handoffPurpose } : undefined,
       })
       const status = response.data as SecuritySetupStatus
       if (status.passwordLoginRequired) {
@@ -479,6 +479,7 @@ export default function LoginPage() {
         <PostLoginSecuritySetup
           initialStatus={securitySetup.status}
           serviceContext={serviceName}
+          handoffPurpose={handoffPurpose}
           onComplete={() => {
             const pending = securitySetup
             setSecuritySetup(null)
