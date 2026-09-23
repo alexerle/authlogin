@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 
-const { nextLogoutUrl, safeFinalUrl } = require('./logout-chain')
+const { isBetterAssistLoginUrl, nextLogoutUrl, safeFinalUrl } = require('./logout-chain')
 
 const websiteDomain = 'https://auth.10hoch2.de'
 const endpoints = ['https://crm.10hoch2.de/logout', 'https://cp.zhzcloud.de/logout']
@@ -23,6 +23,15 @@ test('allows only the BetterAssist login entry as a cross-origin logout destinat
   assert.equal(safeFinalUrl('https://app1.betterassist.me/app', websiteDomain), 'https://auth.10hoch2.de/login')
   assert.equal(safeFinalUrl('https://app1.betterassist.me/auth/login?return_path=https%3A%2F%2Fevil.example', websiteDomain), 'https://auth.10hoch2.de/login')
   assert.equal(safeFinalUrl('https://app1.betterassist.me/auth/login?return_path=%2F%2Fevil.example', websiteDomain), 'https://auth.10hoch2.de/login')
+})
+
+test('recognizes only exact BetterAssist login destinations for a service-scoped logout', () => {
+  assert.equal(isBetterAssistLoginUrl('https://app1.betterassist.me/auth/login?return_path=%2Fapp'), true)
+  assert.equal(isBetterAssistLoginUrl('https://v2.betterassist.me/auth/login?return_path=%2Fapp%2Faccount'), true)
+  assert.equal(isBetterAssistLoginUrl('https://app1.betterassist.me/app'), false)
+  assert.equal(isBetterAssistLoginUrl('https://evil.app1.betterassist.me/auth/login?return_path=%2Fapp'), false)
+  assert.equal(isBetterAssistLoginUrl('https://app1.betterassist.me/auth/login?return_path=%2F%2Fevil.example'), false)
+  assert.equal(isBetterAssistLoginUrl('https://app1.betterassist.me/auth/login?return_path=%2Fapp&extra=1'), false)
 })
 
 test('builds a fixed sequential service logout chain', () => {

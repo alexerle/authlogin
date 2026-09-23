@@ -34,7 +34,7 @@ const {
   verifyAndConsumeHandoffV2Token,
 } = require('./handoff-v2')
 const { readCompleteProfile, validateProfileNames } = require('./profile-fields')
-const { configuredLogoutEndpoints, nextLogoutUrl, safeFinalUrl } = require('./logout-chain')
+const { configuredLogoutEndpoints, isBetterAssistLoginUrl, nextLogoutUrl, safeFinalUrl } = require('./logout-chain')
 const { resolveServiceMfaRequirement, resolveServiceSecurityCompliance } = require('./security-policy')
 const {
   generateRegistrationOptions,
@@ -1164,11 +1164,14 @@ async function handleSignout(req, res) {
   const redirectAfterSignout = () => {
     if (req.method !== 'GET') return false
     const finalUrl = safeFinalUrl(req.query?.redirect, websiteDomain)
+    const endpoints = req.query?.scope === 'service' && isBetterAssistLoginUrl(req.query?.redirect)
+      ? []
+      : serviceLogoutEndpoints
     res.redirect(303, nextLogoutUrl({
       step: 0,
       finalUrl,
       websiteDomain,
-      endpoints: serviceLogoutEndpoints,
+      endpoints,
     }))
     return true
   }

@@ -34,6 +34,28 @@ function safeFinalUrl(value, websiteDomain) {
   }
 }
 
+function isBetterAssistLoginUrl(value) {
+  try {
+    const target = new URL(String(value || ''))
+    const betterAssistHosts = new Set(['v2.betterassist.me', 'app1.betterassist.me'])
+    const returnPath = target.searchParams.get('return_path') || '/app'
+    const onlySupportedParameters = [...target.searchParams.keys()].every(key => key === 'return_path')
+    return (
+      target.protocol === 'https:'
+      && betterAssistHosts.has(target.hostname)
+      && target.port === ''
+      && target.username === ''
+      && target.password === ''
+      && target.pathname === '/auth/login'
+      && onlySupportedParameters
+      && returnPath.startsWith('/')
+      && !returnPath.startsWith('//')
+    )
+  } catch (_) {
+    return false
+  }
+}
+
 function configuredLogoutEndpoints(raw) {
   if (!raw) return DEFAULT_LOGOUT_ENDPOINTS
   return String(raw).split(',').map(value => value.trim()).filter(Boolean).map(value => new URL(value).toString())
@@ -52,4 +74,10 @@ function nextLogoutUrl({ step, finalUrl, websiteDomain, endpoints }) {
   return service.toString()
 }
 
-module.exports = { DEFAULT_LOGOUT_ENDPOINTS, configuredLogoutEndpoints, nextLogoutUrl, safeFinalUrl }
+module.exports = {
+  DEFAULT_LOGOUT_ENDPOINTS,
+  configuredLogoutEndpoints,
+  isBetterAssistLoginUrl,
+  nextLogoutUrl,
+  safeFinalUrl,
+}
