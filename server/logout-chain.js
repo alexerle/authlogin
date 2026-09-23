@@ -10,7 +10,25 @@ const DEFAULT_LOGOUT_ENDPOINTS = [
 function safeFinalUrl(value, websiteDomain) {
   try {
     const target = new URL(String(value || ''), websiteDomain)
-    return target.origin === websiteDomain ? target.toString() : new URL('/login', websiteDomain).toString()
+    if (target.origin === websiteDomain) return target.toString()
+
+    const betterAssistHosts = new Set(['v2.betterassist.me', 'app1.betterassist.me'])
+    const returnPath = target.searchParams.get('return_path') || '/app'
+    const onlySupportedParameters = [...target.searchParams.keys()].every(key => key === 'return_path')
+    if (
+      target.protocol === 'https:'
+      && betterAssistHosts.has(target.hostname)
+      && target.port === ''
+      && target.username === ''
+      && target.password === ''
+      && target.pathname === '/auth/login'
+      && onlySupportedParameters
+      && returnPath.startsWith('/')
+      && !returnPath.startsWith('//')
+    ) {
+      return target.toString()
+    }
+    return new URL('/login', websiteDomain).toString()
   } catch (_) {
     return new URL('/login', websiteDomain).toString()
   }
