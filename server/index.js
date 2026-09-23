@@ -20,7 +20,7 @@ const { verifySession } = require('supertokens-node/recipe/session/framework/exp
 const { sendEmail } = require('./email')
 const {
   PROVISIONABLE_SERVICES,
-  isBetterAssistRegistrationHandoff,
+  isBetterAssistHandoffTarget,
   shouldLoadCrmSecurityPolicy,
   updateProvisionedServices,
 } = require('./service-access')
@@ -1479,11 +1479,12 @@ app.post('/auth/handoff-token', verifySession(), async (req, res) => {
 
     const user = await supertokens.getUser(userId)
     const email = user?.emails?.[0] || ''
-    const betterAssistRegistration = isBetterAssistRegistrationHandoff(
-      targetDomain,
-      handoffPurpose,
-    )
-    if (requiredService && !betterAssistRegistration
+    // BetterAssist owns its tenant membership and rejects users without a local
+    // active membership. Issuing a target-bound token here must therefore not
+    // depend on a delayed or absent CRM service projection. Every other service
+    // keeps the existing CRM access enforcement unchanged.
+    const betterAssistTarget = isBetterAssistHandoffTarget(targetDomain)
+    if (requiredService && !betterAssistTarget
         && !(await hasCrmServiceAccess(email, requiredService, userId))) {
       return res.status(403).json({ status: 'ERROR', message: 'No service access' })
     }

@@ -3,6 +3,7 @@ const test = require('node:test')
 
 const {
   isBetterAssistRegistrationContext,
+  isBetterAssistHandoffTarget,
   isBetterAssistRegistrationHandoff,
   shouldLoadCrmSecurityPolicy,
   updateProvisionedServices,
@@ -26,6 +27,15 @@ test('only the explicit BetterAssist registration handoff bypasses prior service
   assert.equal(isBetterAssistRegistrationHandoff('app1.betterassist.me', 'registration'), true)
   assert.equal(isBetterAssistRegistrationHandoff('v2.betterassist.me', ''), false)
   assert.equal(isBetterAssistRegistrationHandoff('crm.10hoch2.de', 'registration'), false)
+})
+
+test('normal BetterAssist handoffs are delegated only to BetterAssist itself', () => {
+  assert.equal(isBetterAssistHandoffTarget('v2.betterassist.me'), true)
+  assert.equal(isBetterAssistHandoffTarget('app1.betterassist.me'), true)
+  assert.equal(isBetterAssistHandoffTarget('crm.10hoch2.de'), false)
+  assert.equal(isBetterAssistHandoffTarget('cp.zhzcloud.de'), false)
+  assert.equal(isBetterAssistHandoffTarget('web.zhzcloud.de'), false)
+  assert.equal(isBetterAssistHandoffTarget('evil.app1.betterassist.me'), false)
 })
 
 test('BetterAssist registration does not depend on CRM security policies', () => {

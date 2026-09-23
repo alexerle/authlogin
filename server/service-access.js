@@ -16,8 +16,12 @@ function updateProvisionedServices(current, service, enabled) {
 }
 
 function isBetterAssistRegistrationHandoff(targetDomain, purpose) {
-  return ['v2.betterassist.me', 'app1.betterassist.me'].includes(targetDomain)
+  return isBetterAssistHandoffTarget(targetDomain)
     && purpose === 'registration'
+}
+
+function isBetterAssistHandoffTarget(targetDomain) {
+  return ['v2.betterassist.me', 'app1.betterassist.me'].includes(targetDomain)
 }
 
 function isBetterAssistRegistrationContext(targetOrService, purpose) {
@@ -35,6 +39,7 @@ module.exports = {
   PROVISIONABLE_SERVICES,
   isBetterAssistRegistrationContext,
   updateProvisionedServices,
+  isBetterAssistHandoffTarget,
   isBetterAssistRegistrationHandoff,
   shouldLoadCrmSecurityPolicy,
 }
