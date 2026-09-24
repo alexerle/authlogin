@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, User, Loader, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import AuthLayout from '../components/AuthLayout'
 import api from '../utils/api'
 import { requestTurnstileToken } from '../utils/turnstile'
 
 export default function RegisterPage() {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const loginHref = `/login${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
   const loginHint = searchParams.get('login_hint') || ''
@@ -87,11 +86,8 @@ export default function RegisterPage() {
       })
 
       if (response.data.status === 'OK') {
+        await api.post('/auth/user/email/verify/token', {})
         setSuccess(true)
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          navigate(loginHref)
-        }, 3000)
       } else if (response.data.status === 'FIELD_ERROR') {
         const fieldError = response.data.formFields?.find((f: any) => f.error)
         setError(fieldError?.error || 'Registrierung fehlgeschlagen')
@@ -114,19 +110,19 @@ export default function RegisterPage() {
   // Success state
   if (success) {
     return (
-      <AuthLayout title="Registrierung erfolgreich">
+      <AuthLayout title="E-Mail bestätigen">
         <div className="text-center">
           <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
-            Willkommen bei 10hoch2!
+            Fast geschafft!
           </h2>
           <p className="text-gray-600 mb-4">
-            Wir haben Ihnen eine Bestätigungs-E-Mail gesendet. Bitte überprüfen Sie Ihren Posteingang.
+            Wir haben Ihnen eine Bestätigungs-E-Mail gesendet. Bitte klicken Sie auf den Link, um Ihr Konto freizuschalten.
           </p>
           <p className="text-sm text-gray-500">
-            Sie werden in Kürze zum Login weitergeleitet...
+            Erst danach wird Ihre Registrierung an uns übermittelt. Bitte prüfen Sie auch Ihren Spam-Ordner.
           </p>
           <Link to={loginHref} className="mt-4 inline-block auth-link">
             Jetzt anmelden

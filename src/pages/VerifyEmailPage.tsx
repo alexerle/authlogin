@@ -7,8 +7,13 @@ import api from '../utils/api'
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') || ''
+  const requestedReturnTo = searchParams.get('returnTo') || ''
+  const loginHref = requestedReturnTo === '/login' || requestedReturnTo.startsWith('/login?')
+    ? requestedReturnTo
+    : '/login'
 
-  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'resend'>('loading')
+  const pending = searchParams.get('pending') === '1'
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'resend' | 'awaiting'>('loading')
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
   const [resendLoading, setResendLoading] = useState(false)
@@ -18,9 +23,22 @@ export default function VerifyEmailPage() {
     if (token) {
       verifyEmail()
     } else {
-      setStatus('resend')
+      setStatus(pending ? 'awaiting' : 'resend')
     }
-  }, [token])
+  }, [token, pending])
+
+  const resendForCurrentUser = async () => {
+    setResendLoading(true)
+    setResendSuccess(false)
+    try {
+      await api.post('/auth/user/email/verify/token', {})
+      setResendSuccess(true)
+    } catch {
+      setError('Die Bestätigungs-E-Mail konnte nicht gesendet werden.')
+    } finally {
+      setResendLoading(false)
+    }
+  }
 
   const verifyEmail = async () => {
     try {
@@ -78,6 +96,28 @@ export default function VerifyEmailPage() {
     )
   }
 
+  if (status === 'awaiting') {
+    return (
+      <AuthLayout title="E-Mail bestätigen">
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+            <Mail className="h-8 w-8 text-blue-600" />
+          </div>
+          <h2 className="mb-2 text-xl font-semibold text-gray-800">Bitte prüfen Sie Ihr Postfach</h2>
+          <p className="mb-6 text-gray-600">
+            Ihr neues Konto wird erst nach Klick auf den Bestätigungslink freigeschaltet.
+          </p>
+          <button type="button" disabled={resendLoading} className="auth-button" onClick={resendForCurrentUser}>
+            {resendLoading && <Loader size={18} className="animate-spin" />}
+            {resendLoading ? 'Senden...' : 'Bestätigungs-E-Mail erneut senden'}
+          </button>
+          {resendSuccess && <p className="mt-4 text-sm text-green-700">Die E-Mail wurde erneut gesendet.</p>}
+          {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+        </div>
+      </AuthLayout>
+    )
+  }
+
   // Success state
   if (status === 'success') {
     return (
@@ -92,7 +132,7 @@ export default function VerifyEmailPage() {
           <p className="text-gray-600 mb-6">
             Ihr Konto ist jetzt vollständig aktiviert.
           </p>
-          <Link to="/login" className="auth-button inline-flex">
+          <Link to={loginHref} className="auth-button inline-flex">
             Zum Login
           </Link>
         </div>

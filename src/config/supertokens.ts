@@ -136,7 +136,7 @@ export const initSuperTokens = () => {
 
       // Email Verification
       EmailVerification.init({
-        mode: 'OPTIONAL', // or 'REQUIRED'
+        mode: 'REQUIRED',
       }),
 
       // Session Management

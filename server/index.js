@@ -297,18 +297,27 @@ supertokens.init({
               }
               const email = result.user.emails?.[0] || input.formFields.find(f => f.id === 'email')?.value
               if (email) {
+                let loginQuery = ''
                 try {
-                  await notifyNewCentralRegistration({ email, name: profile.ok ? profile.name : '', authUserId: result.user.id })
-                } catch (error) {
-                  console.error('[Registration notification]', error.message)
-                }
-                if (profile.ok) {
-                  void syncCrmIdentityProfile({
-                    email,
-                    authUserId: result.user.id,
-                    firstName: profile.firstName,
-                    lastName: profile.lastName,
-                  }).catch(() => false)
+                  const referrer = new URL(input.options.req.getHeaderValue('referer') || '')
+                  if (referrer.origin === websiteDomain && referrer.pathname === '/register') {
+                    loginQuery = referrer.search.slice(0, 4000)
+                  }
+                } catch (_) {}
+                await UserMetadata.updateUserMetadata(result.user.id, {
+                  centralRegistrationVerificationPending: true,
+                  centralRegistrationRequestedAt: new Date().toISOString(),
+                  centralRegistrationLoginQuery: loginQuery,
+                })
+                // SuperTokens creates the session before this API override runs.
+                // Correct its claim before returning it so the new account cannot
+                // use protected routes until the email address is verified.
+                if (result.session) {
+                  await result.session.setClaimValue(
+                    EmailVerification.EmailVerificationClaim,
+                    false,
+                    input.userContext
+                  )
                 }
               }
             }
@@ -432,11 +441,74 @@ supertokens.init({
     }),
 
     EmailVerification.init({
-      mode: 'OPTIONAL',
+      mode: 'REQUIRED',
+      override: {
+        functions: (original) => ({
+          ...original,
+          isEmailVerified: async (input) => {
+            if (await original.isEmailVerified(input)) return true
+
+            // Existing identities and email-code/social logins retain their
+            // current behaviour. Only public password registrations carry
+            // this marker and therefore require explicit verification.
+            const metadata = await UserMetadata.getUserMetadata(input.recipeUserId.getAsString())
+            return metadata.metadata?.centralRegistrationVerificationPending !== true
+          },
+        }),
+        apis: (original) => ({
+          ...original,
+          verifyEmailPOST: async (input) => {
+            const result = await original.verifyEmailPOST(input)
+            if (result.status !== 'OK') return result
+
+            const recipeUserId = result.user.recipeUserId.getAsString()
+            const user = await supertokens.getUser(recipeUserId)
+            const authUserId = user?.id || recipeUserId
+            const metadataResult = await UserMetadata.getUserMetadata(authUserId)
+            const metadata = metadataResult.metadata || {}
+            if (metadata.centralRegistrationVerificationPending !== true) return result
+
+            await UserMetadata.updateUserMetadata(authUserId, {
+              centralRegistrationVerificationPending: false,
+              centralRegistrationVerifiedAt: new Date().toISOString(),
+            })
+
+            const email = result.user.email
+            const name = metadata.name || [metadata.firstName, metadata.lastName].filter(Boolean).join(' ')
+            try {
+              await notifyNewCentralRegistration({ email, name, authUserId })
+              await UserMetadata.updateUserMetadata(authUserId, {
+                centralRegistrationNotificationSentAt: new Date().toISOString(),
+              })
+            } catch (error) {
+              console.error('[Registration notification]', error.message)
+            }
+
+            if (metadata.firstName && metadata.lastName) {
+              void syncCrmIdentityProfile({
+                email,
+                authUserId,
+                firstName: metadata.firstName,
+                lastName: metadata.lastName,
+              }).catch(() => false)
+            }
+            return result
+          },
+        }),
+      },
       emailDelivery: {
         override: (orig) => ({
           ...orig,
           sendEmail: async (input) => {
+            const verifyUrl = new URL(input.emailVerifyLink)
+            verifyUrl.pathname = '/verify-email'
+            try {
+              const metadata = await UserMetadata.getUserMetadata(input.user.id)
+              const loginQuery = String(metadata.metadata?.centralRegistrationLoginQuery || '')
+              verifyUrl.searchParams.set('returnTo', `/login${loginQuery.startsWith('?') ? loginQuery : ''}`)
+            } catch (_) {
+              verifyUrl.searchParams.set('returnTo', '/login')
+            }
             await sendEmail({
               to: input.user.email,
               subject: 'E-Mail-Adresse bestätigen – 10hoch2',
@@ -444,7 +516,7 @@ supertokens.init({
                 <p>Hallo,</p>
                 <p>Bitte bestätigen Sie Ihre E-Mail-Adresse.</p>
                 <p style="text-align:center;margin:32px 0">
-                  <a href="${input.emailVerifyLink}" style="${btnStyle}">E-Mail bestätigen</a>
+                  <a href="${verifyUrl.toString()}" style="${btnStyle}">E-Mail bestätigen</a>
                 </p>
               `),
             })

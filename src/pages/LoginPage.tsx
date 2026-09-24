@@ -232,6 +232,16 @@ export default function LoginPage() {
 
   const handleLoginSuccess = async (_token: string, isOtp = false) => {
     try {
+      const verification = await api.get('/auth/user/email/verify')
+      if (verification.data.isVerified === false) {
+        try {
+          await api.post('/auth/user/email/verify/token', {})
+        } catch (_) {}
+        const returnTo = `/login${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+        navigate(`/verify-email?pending=1&returnTo=${encodeURIComponent(returnTo)}`)
+        return
+      }
+
       const serviceManagesOwnMfa = serviceName === 'web.zhzcloud.de' || redirectTargetHost === 'web.zhzcloud.de'
       if (serviceManagesOwnMfa) {
         await continueAfterLogin(_token, isOtp)
